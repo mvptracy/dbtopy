@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<tables namespace="Menu\Data" config="dbConf.sys" db_type="mysql" prefix="tb_">
+    <table name="menu" desc="菜单表" engine="myisam" charset="utf8mb4" split="3">
+        <field name="id" type="int" auto="true" primary="true" unsigned="true" />
+        <field name="parentId" type="int" unsigned="true" null="false" desc="父级菜单id" />
+        <field name="name" type="varchar" size="40" null="false" desc="名称" />
+        <field name="url" type="varchar" size="200" null="false" desc="链接url" />
+        <field name="icon" type="varchar" size="30"  desc="图标class" />
+        <field name="sort" type="int" size="2" unsigned="true" null="false" param="0" desc="排序" />
+        <field name="sys" type="int" size="2" unsigned="true" null="false" param="1" desc="系统(1:crm;2:shopcrm)" />
+        <primary value="id" />
+        <index name="url,id" value="url,id"/>
+        <index name="url" value="url" unique="true"/>
+        <index name="sys" value="sys" />
+        <select name="getMenuByIds" suffix=" order by sort" desc="批量查菜单">
+            <field name="id" />
+            <field name="parentId" />
+            <field name="name" />
+            <field name="url" />
+            <field name="icon" />
+            <field name="sort" />
+            <field name="sys" />
+            <where name="id" comp="in" />
+        </select>
+        <select name="getMenuAll" suffix="order by sort" desc="查所有菜单">
+            <field name="id" />
+            <field name="parentId" />
+            <field name="name" />
+            <field name="url" />
+            <field name="icon" />
+            <field name="sys" />
+        </select>
+        <select name="getChildMenu" suffix="order by sort" desc="查子级菜单">
+            <field name="id" />
+            <field name="parentId" />
+            <field name="name" />
+            <field name="url" />
+            <field name="icon" />
+            <field name="sort" />
+            <where name="parentId" comp="in"/>
+        </select>
+    </table>
+    <table name="operation" desc="按钮表" engine="myisam" charset="utf8mb4" prefix="tb_">
+        <field name="id" type="int" auto="true" primary="true" unsigned="true" />
+        <field name="name" type="varchar" size="50" null="false" desc="按钮名称" />
+        <field name="code" type="varchar" size="250" null="false" desc="url或api代码" />
+        <field name="view_code" type="varchar" size="50" null="false" desc="前端页面按钮代码" />
+        <field name="menu_id" type="int" size="2" null="false" param="0" desc="菜单id" />
+        <field name="parentId" type="int" size="2" null="false" param="0" desc="父级id" />
+        <index name="menu_id" value="menu_id" />
+        <select name="getPermissionCode" desc="查页面权限">
+            <join table="permission" type="inner">
+                <cond table1="operation" field1="id" table2="permission" field2="resource_id" />
+            </join>
+            <field table="operation" name="view_code"/>
+            <where table="operation" name="menu_id"/>
+            <where table="permission" name="role_id" />
+            <where table="permission" name="resource_type" value="2"/>
+        </select>
+        <select name="getOperationByIds" desc="根据id查按钮">
+            <field name="id" />
+            <field name="name" />
+            <field name="menu_id" />
+            <field name="parentId" />
+            <where name="id" comp="in" />
+        </select>
+        <select name="getIdByCode" desc="查一级权限">
+            <field name="id"/>
+            <field name="code"/>
+            <where name="code" like="true"/>
+        </select>
+        <select name="getPermissionCodeByParentId" desc="查子页面权限">
+            <join table="permission" type="inner">
+                <cond table1="operation" field1="id" table2="permission" field2="resource_id" />
+            </join>
+            <field table="operation" name="view_code"/>
+            <where table="operation" name="parentId"/>
+            <where table="permission" name="role_id" />
+            <where table="permission" name="resource_type" value="2"/>
+        </select>
+        <select name="getViewCodeByMenu" desc="根据菜单查权限">
+            <field name="view_code"/>
+            <where name="menu_id"/>
+        </select>
+        <select name="getViewCodeByParentId" desc="查子级权限">
+            <field name="view_code"/>
+            <where name="parentId"/>
+        </select>
+    </table>
+    <table name="permission" desc="角色权限表" charset="utf8mb4" prefix="tb_">
+        <field name="id" type="int" auto="true" primary="true" unsigned="true" />
+        <field name="role_id" type="int" size="2" null="false" desc="角色id" />
+        <field name="resource_id" type="int" size="2" null="false" desc="权限id" />
+        <field name="resource_type" type="int" size="2" null="false" desc="权限类型" />
+        <index name="role_id_type" value="role_id,resource_type" />
+        <delete name="delByRoleId" desc="删除角色全部权限" real="true">
+            <where name="role_id" />
+        </delete>
+        <select name="getByRoleId" desc="查角色所有权限">
+            <field name="resource_id" />
+            <field name="resource_type" />
+            <where name="role_id" />
+        </select>
+        <select name="getMenuByRoleId" desc="查所有菜单url">
+            <join table="menu" type="left">
+                <cond table1="menu" field1="id" table2="permission" field2="resource_id"/>
+            </join>
+            <field table="menu" name="url" />
+            <field table="menu" name="sys" />
+            <where table="permission" name="role_id"/>
+            <where table="permission" name="resource_type" value="1"/>
+            <where table="menu" name="url" comp="!=" value='""'/>
+        </select>
+        <select name="getOperationByRoleId" desc="查所有功能点code">
+            <join table="operation" type="left">
+                <cond table1="operation" field1="id" table2="permission" field2="resource_id"/>
+            </join>
+            <field table="operation" name="code" />
+            <where table="permission" name="role_id"/>
+            <where table="permission" name="resource_type" value="2"/>
+            <where table="operation" name="code" comp="!=" value='""'/>
+        </select>
+        <select name="getRoleidByMenuid" desc="查有菜单的所有角色">
+            <field name="role_id"/>
+            <where name="resource_type" value="1"/>
+            <where name="resource_id"/>
+        </select>
+    </table>
+    <table name="allPermissionCache" desc="所有菜单权限缓存" config="dbConf.redis_account" db_type="redis" prefix="" >
+        <field name="pkey" type="text" primary="true"  desc="key" null="false"/>
+        <field name="all_permission" type="text"  desc="缓存数据" null="false"/>
+
+    </table>
+</tables>
