@@ -333,7 +333,6 @@ class Make(object):
         final_str += '\t}\n\n'
         print(final_str)
 
-
     @staticmethod
     def get_class_name(table_name):
         class_name = ''
