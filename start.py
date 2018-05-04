@@ -1,5 +1,4 @@
 import xml.dom.minidom as minidom
-import re
 from dbtopy.tables import Tables
 from dbtopy.table import Table
 from dbtopy.field import Field
@@ -92,7 +91,8 @@ class DB(object):
             # make.make_create_sql(table)
 
             # 写php文件
-
+            make.make_php_file(table, self.tables.namespace, self.tables.config, self.tables.db_type,
+                               self.tables.prefix)
             n += 1
 
     # def check_required(self, value, type, name):
@@ -114,5 +114,5 @@ class DB(object):
     #     print("\n".join(['%s:%s' % item for item in obj.__dict__.items()]))
 
 
-db = DB('/Users/tracy/work/Python/dbtopy/db.xml')
+db = DB('/Users/tracy//work/project/meiyu/dic/test/db.xml')
 db.do()

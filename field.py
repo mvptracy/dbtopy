@@ -52,3 +52,5 @@ class Field(object):
             self.type = 'bigint'
         else:
             self.type = 'int'
+
+
