@@ -13,9 +13,9 @@ class Index(object):
         self.deal_xml()
 
     def deal_xml(self):
-        for (k, v) in self.__node.items():
+        for (k, v) in self.__node.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('index key error:' + k)
+                raise TypeError('index attribute error:' + k)
             else:
                 setattr(self, k, v)
 

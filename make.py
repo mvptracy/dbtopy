@@ -12,7 +12,8 @@ class Make(object):
     def make_add_sql(self, table):
         sql = ''
         # field
-        for field in table.field_list:
+        for (field_name, field) in table.field_list.items():
+
             sql += '\tADD COLUMN'
             sql += ' `' + field.name + '`'
             sql += ' ' + field.type
@@ -45,7 +46,7 @@ class Make(object):
         if table.primary_key != '':
             sql += '\tADD PRIMARY KEY (' + self.deal_index(table.primary_key) + '),\n'
 
-        for index in table.index_list:
+        for (index_name, index) in table.index_list.items():
             if index.unique == 'true':
                 sql += '\tADD UNIQUE KEY `index_' + index.name.replace(',', '_') + '`'
             else:
@@ -71,84 +72,100 @@ class Make(object):
 
     def make_create_sql(self, table):
 
-        sql = ''
-        # field
-        for field in table.field_list:
-            sql += '\t'
-            sql += '`' + field.name + '`'
-            sql += ' ' + field.type
-
-            if field.size != '' and int(field.size) > 0:
-                sql += '(' + field.size + ')'
-
-            if field.unsigned == 'true':
-                sql += ' unsigned'
-
-            if field.charset != '':
-                if field.charset not in field.CHARSET_TYPE:
-                    raise TypeError('charset error:' + field.charset)
-                else:
-                    sql += ' CHARACTER SET ' + field.charset
-
-            if field.value:
-                sql += ' DEFAULT \'' + field.param + '\''
-            elif field.null == 'true':
-                sql += ' DEFAULT NULL'
-            else:
-                sql += ' NOT NULL'
-
-            if field.desc != '':
-                sql += ' COMMENT \'' + field.desc + '\''
-            sql += ',\n'
-
-        # default field
-        sql += '\t`verid` bigint,\n'
-        sql += '\t`create_time` datetime,\n'
-        sql += '\t`update_time` datetime,\n'
-        sql += '\t`del` tinyint,\n'
-
-        # index
-        if table.primary_key != '':
-            sql += '\tPRIMARY KEY (' + self.deal_index(table.primary_key) + '),\n'
-
-        for index in table.index_list:
-            if index.unique == 'true':
-                sql += '\tUNIQUE KEY `index_' + index.name.replace(',', '_') + '`'
-            else:
-                sql += '\tINDEX `index_' + index.name.replace(',', '_') + '`'
-
-            sql += ' (' + self.deal_index(index.value, add_del=True) + '),\n'
-
-        # default index
-        sql += '\tUNIQUE KEY index_default_del(' + self.deal_index(table.primary_key, add_del=True) + ')'
-
-        sql += '\n)'
-
-        # table info
-        if table.engine and table.engine in ('myisam', 'innodb'):
-            sql += ' ENGINE=' + table.engine.upper()
-        if table.charset:
-            sql += ' DEFAULT CHARSET=' + table.charset
-        if table.desc:
-            sql += ' COMMENT=\'' + table.desc + '\''
-
-        sql += ';\n\n'
-
-        if table.split:
-            n = 0
-            while n < int(table.split):
-                sql_head = 'CREATE TABLE IF NOT EXISTS `' + table.prefix + table.name + '_' + str(n) + '` (\n'
-                self.__write_file('./create.sql', sql_head + sql, 'w' if n == 0 else 'a')
-                n += 1
+        if table.split_time:
+            sql = 'CREATE TABLE IF NOT EXISTS `' + table.prefix + table.name + '_index` (\n'
+            sql += '\t`id` bigint unsigned NOT NULL AUTO_INCREMENT,\n'
+            sql += '\t`table_name` varchar(100) not null,\n'
+            sql += '\t`time` datetime,\n'
+            sql += '\t`verid` bigint,\n'
+            sql += '\t`create_time` datetime,\n'
+            sql += '\t`update_time` datetime,\n'
+            sql += '\t`del` tinyint,\n'
+            sql += '\tPRIMARY KEY(`id`),\n'
+            sql += '\tINDEX index_table_name( `table_name` ),\n'
+            sql += '\tINDEX index_time( `time` ),\n'
+            sql += ') DEFAULT CHARSET=utf8;'
+            sql += '\n'
+            self.__write_file('./create.sql', sql)
         else:
-            sql_head = 'CREATE TABLE IF NOT EXISTS `' + table.prefix + table.name + '` (\n'
-            self.__write_file('./create.sql', sql_head + sql)
+            sql = ''
+            # field
+            for (field_name, field) in table.field_list.items():
+                sql += '\t'
+                sql += '`' + field.name + '`'
+                sql += ' ' + field.type
+
+                if field.size != '' and int(field.size) > 0:
+                    sql += '(' + field.size + ')'
+
+                if field.unsigned == 'true':
+                    sql += ' unsigned'
+
+                if field.charset != '':
+                    if field.charset not in field.CHARSET_TYPE:
+                        raise TypeError('charset error:' + field.charset)
+                    else:
+                        sql += ' CHARACTER SET ' + field.charset
+
+                if field.value:
+                    sql += ' DEFAULT \'' + field.param + '\''
+                elif field.null == 'true':
+                    sql += ' DEFAULT NULL'
+                else:
+                    sql += ' NOT NULL'
+
+                if field.desc != '':
+                    sql += ' COMMENT \'' + field.desc + '\''
+                sql += ',\n'
+
+            # default field
+            sql += '\t`verid` bigint,\n'
+            sql += '\t`create_time` datetime,\n'
+            sql += '\t`update_time` datetime,\n'
+            sql += '\t`del` tinyint,\n'
+
+            # index
+            if table.primary_key != '':
+                sql += '\tPRIMARY KEY (' + self.deal_index(table.primary_key) + '),\n'
+
+            for (index_name, index) in table.index_list.items():
+                if index.unique == 'true':
+                    sql += '\tUNIQUE KEY `index_' + index.name.replace(',', '_') + '`'
+                else:
+                    sql += '\tINDEX `index_' + index.name.replace(',', '_') + '`'
+
+                sql += ' (' + self.deal_index(index.value, add_del=True) + '),\n'
+
+            # default index
+            sql += '\tUNIQUE KEY index_default_del(' + self.deal_index(table.primary_key, add_del=True) + ')'
+
+            sql += '\n)'
+
+            # table info
+            if table.engine and table.engine in ('myisam', 'innodb'):
+                sql += ' ENGINE=' + table.engine.upper()
+            if table.charset:
+                sql += ' DEFAULT CHARSET=' + table.charset
+            if table.desc:
+                sql += ' COMMENT=\'' + table.desc + '\''
+
+            sql += ';\n\n'
+
+            if table.split:
+                n = 0
+                while n < int(table.split):
+                    sql_head = 'CREATE TABLE IF NOT EXISTS `' + table.prefix + table.name + '_' + str(n) + '` (\n'
+                    self.__write_file('./create.sql', sql_head + sql, 'w' if n == 0 else 'a')
+                    n += 1
+            else:
+                sql_head = 'CREATE TABLE IF NOT EXISTS `' + table.prefix + table.name + '` (\n'
+                self.__write_file('./create.sql', sql_head + sql)
 
     def make_insert_sql(self, table):
         # field
         field_str = ''
         value_str = ''
-        for field in table.field_list:
+        for (field_name, field) in table.field_list.items():
             field_str += '\t`' + field.name + '`,\n'
             if field.type in Field.INT_TYPE:
                 value_str += '\t0,\n'
@@ -183,7 +200,7 @@ class Make(object):
     def make_drop_sql(self, table):
         sql = ''
         # field
-        for field in table.field_list:
+        for (field_name, field) in table.field_list.items():
             sql += '\tDROP COLUMN'
             sql += ' `' + field.name + '`'
             sql += ',\n'
@@ -192,7 +209,7 @@ class Make(object):
         if table.primary_key != '':
             sql += '\tDROP PRIMARY KEY,\n'
 
-        for index in table.index_list:
+        for (index_name, index) in table.index_list.items():
             if index.unique == 'true':
                 sql += '\tDROP UNIQUE KEY `index_' + index.name.replace(',', '_') + '`'
             else:

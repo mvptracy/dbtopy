@@ -16,10 +16,13 @@ class Table(object):
         self.charset = 'utf8'
         self.split_time = ''
         self.primary_key = ''
-        self.field_list = []
+        self.field_list = {}  # field_name:field_obj
         self.field_name_list = ['verid', 'create_time', 'update_time', 'del']
-        self.index_list = []
+        self.index_list = {}  # index_name:index_obj
         self.index_name_list = []
+        self.update = []  # update_obj
+        self.delete = []  # delete_obj
+        self.select = []  # select_obj
 
         # args
         self.__node_table = node_table
@@ -29,9 +32,9 @@ class Table(object):
         self.deal_xml()
 
     def deal_xml(self):
-        for (k, v) in self.__node_table.items():
+        for (k, v) in self.__node_table.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('table key error:' + k)
+                raise TypeError('table attribute error:' + k)
             else:
                 setattr(self, k, v)
 
@@ -47,15 +50,25 @@ class Table(object):
 
     def add_field(self, field):
         if field.name not in self.field_name_list:
-            self.field_list.append(field)
+            self.field_list[field.name] = field
             self.field_name_list.append(field.name)
             if field.primary == 'true':
                 self.primary_key = field.name
 
     def add_index(self, index):
         if index.name not in self.index_name_list:
-            self.index_list.append(index)
+            self.index_list[index.name] = index
             self.index_name_list.append(index.name)
 
     def add_primary(self, index):
         self.primary_key = index.value
+
+    def add_update(self, update):
+        self.update.append(update)
+
+    def add_delete(self, delete):
+        self.delete.append(delete)
+
+    def add_select(self, select):
+        self.select.append(select)
+

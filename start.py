@@ -1,92 +1,118 @@
-import xml.etree.ElementTree as ET
+import xml.dom.minidom as minidom
+import re
 from dbtopy.tables import Tables
 from dbtopy.table import Table
 from dbtopy.field import Field
 from dbtopy.index import Index
 from dbtopy.make import Make
+from dbtopy.update import Update
+from dbtopy.delete import Delete
+from dbtopy.select import Select
 
 
 class DB(object):
 
     def __init__(self, file_path):
+        self.tables = ''
         self.file_path = file_path
 
     def do(self):
         self.deal_xml()
+        self.make_file()
 
     def deal_xml(self):
-        tree = ET.parse(self.file_path)
-        root = tree.getroot()
+        xml_str = ''
+        with open(self.file_path, 'r', encoding='utf-8') as fp:
+            xml_str += fp.read()
+
+        xml_str = xml_str.replace('"<"', '"lt"')
+        xml_str = xml_str.replace('"<="', '"lteq"')
+        xml_str = xml_str.replace('"<>"', '"ltgt"')
+
+        # 替换特殊字符
+
+        root = minidom.parseString(xml_str).documentElement
 
         tables = Tables(root)
 
-        n = 1
         # table
-        for node2 in root:
-            if node2.tag == 'table':
-                print('table:' + node2.attrib['name'])
+        for elem in root.getElementsByTagName('table'):
+            print('\ntable ======> ' + elem.getAttribute('name'))
 
-                table = Table(node2.attrib, tables)
-                if table.db_type == 'mysql':
-                    for node3 in node2:
-                        attr = node3.attrib
-                        if node3.tag == 'field':
-                            # print('deal field')
-                            table.add_field(Field(attr))
+            table = Table(elem, tables)
 
-                        elif node3.tag == 'index':
-                            # print('deal index')
-                            table.add_index(Index(attr))
+            if table.db_type == 'mysql':
 
-                        elif node3.tag == 'primary':
-                            # print('deal primary')
-                            table.add_primary(Index(attr))
+                for node in elem.childNodes:
+                    if node.nodeType != node.ELEMENT_NODE:
+                        continue
 
-                        # elif node3.tag == 'update':
-                        #     print('deal update')
-                        #
-                        # elif node3.tag == 'delete':
-                        #     print('deal delete')
-                        #
-                        # elif node3.tag == 'where':
-                        #     print('deal where')
-                        #
-                        # elif node3.tag == 'select':
-                        #     print('deal select')
+                    if node.nodeName == 'field':
+                        table.add_field(Field(node))
 
-                    # 写文件
-                    make = Make(n)
-                    make.make_add_sql(table)
-                    make.make_drop_sql(table)
-                    make.make_insert_sql(table)
-                    make.make_create_sql(table)
+                    elif node.nodeName == 'index':
+                        # print('deal index')
+                        table.add_index(Index(node))
 
-                    # 清空数据
-                elif table.db_type == 'redis':
-                    pass
-                elif table.db_type == 'file':
-                    pass
+                    elif node.nodeName == 'primary':
+                        # print('deal primary')
+                        table.add_primary(Index(node))
 
-                n += 1
+                    elif node.nodeName == 'update':
+                        # print('deal update')
+                        table.add_update(Update(node))
 
-    def check_required(self, value, type, name):
-        value = value.strip()
-        if isinstance(value, type) and value:
-            return value
-        else:
-            raise ValueError(name + ' error')
+                    elif node.nodeName == 'delete':
+                        # print('deal delete')
+                        table.add_delete(Delete(node))
 
-    def check_use_default(self, name, value):
+                    elif node.nodeName == 'select':
+                        # print('deal select')
+                        table.add_select(Select(node))
 
-        value = value.strip()
-        if not value:
-            return self.__getattribute__(name)
-        else:
-            return value
+                tables.add_table(table)
 
-    def pr_obj(self, obj):
-        print("\n".join(['%s:%s' % item for item in obj.__dict__.items()]))
+                # 清空数据
+
+            elif table.db_type == 'redis':
+                pass
+            elif table.db_type == 'file':
+                pass
+
+        self.tables = tables
+
+    def make_file(self):
+        n = 1
+        for (tb_name, table) in self.tables.table.items():
+            # 写sql文件
+            make = Make(n)
+            # make.make_add_sql(table)
+            # make.make_drop_sql(table)
+            # make.make_insert_sql(table)
+            # make.make_create_sql(table)
+
+            # 写php文件
+
+            n += 1
+
+    # def check_required(self, value, type, name):
+    #     value = value.strip()
+    #     if isinstance(value, type) and value:
+    #         return value
+    #     else:
+    #         raise ValueError(name + ' error')
+    #
+    # def check_use_default(self, name, value):
+    #
+    #     value = value.strip()
+    #     if not value:
+    #         return self.__getattribute__(name)
+    #     else:
+    #         return value
+
+    # def pr_obj(self, obj):
+    #     print("\n".join(['%s:%s' % item for item in obj.__dict__.items()]))
 
 
-db = DB('db.xml')
+db = DB('/Users/tracy/work/Python/dbtopy/db.xml')
 db.do()

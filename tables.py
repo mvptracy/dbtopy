@@ -6,6 +6,7 @@ class Tables(object):
         self.config = ''
         self.db_type = ''
         self.prefix = ''
+        self.table = {}  # table_name:table_obj
 
         # args
         self.__node_tables = node_tables
@@ -14,8 +15,11 @@ class Tables(object):
         self.deal_xml()
 
     def deal_xml(self):
-        for (k, v) in self.__node_tables.items():
+        for (k, v) in self.__node_tables.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('tables key error:' + k)
+                raise TypeError('tables attribute error:' + k)
             else:
                 setattr(self, k, v)
+
+    def add_table(self, table):
+        self.table[table.name] = table

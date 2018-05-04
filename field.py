@@ -26,9 +26,9 @@ class Field(object):
         self.deal_xml()
 
     def deal_xml(self):
-        for (k, v) in self.__node.items():
+        for (k, v) in self.__node.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('field key error:' + k)
+                raise TypeError('field attribute error:' + k)
             else:
                 setattr(self, k, v)
 
