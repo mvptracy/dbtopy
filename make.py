@@ -330,7 +330,7 @@ class Make(object):
         final_str += '\t' * 2 + '$sql .= \',  \\\'1\\\', \\\'\' . $curDateTime . \'\\\', \\\'\' . $curDateTime . \'\\\', \\\'0\\\' )\';\n'
         final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
         final_str += '\t' * 2 + 'return $db->insert( $sql, $bind );\n'
-        final_str == '\t}\n\n'
+        final_str += '\t}\n\n'
         print(final_str)
 
 
