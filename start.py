@@ -85,10 +85,10 @@ class DB(object):
         for (tb_name, table) in self.tables.table.items():
             # 写sql文件
             make = Make(n)
-            # make.make_add_sql(table)
-            # make.make_drop_sql(table)
-            # make.make_insert_sql(table)
-            # make.make_create_sql(table)
+            make.make_add_sql(table)
+            make.make_drop_sql(table)
+            make.make_insert_sql(table)
+            make.make_create_sql(table)
 
             # 写php文件
             make.make_php_file(table, self.tables.namespace, self.tables.config, self.tables.db_type,
