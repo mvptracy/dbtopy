@@ -714,10 +714,8 @@ class Make(object):
                             variable_name += '_include'
                         elif 'not in' == w_obj.w['comp']:
                             variable_name += '_exclude'
-                        # func_doc_comment += '\t * @param (%s) $%s\n' % (w_obj.w['comp'], variable_name)
                         comp = self.replace_spec_string(w_obj.w['comp'])
                     else:
-                        # func_doc_comment += '\t * @param (=) $%s\n' % variable_name
                         comp = '='
 
                     if 'value' in w_obj.w:
@@ -736,17 +734,13 @@ class Make(object):
                             variable_name,
                             self.get_bind_value(table.field_list[f_name], variable_name))
 
-                    # where_str += '\t' * 2 + 'if ( false !== $%s )\n' % variable_name
-                    # where_str += '\t' * 2 + '{\n'
-                    # where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
-                    #     variable_name, self.get_bind_value(table.field_list[f_name], variable_name, w_obj.w['value']))
 
                     if 'comp' in w_obj.w and w_obj.w['comp'] in ('in', 'not in'):
                         where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
-                            variable_name, self.table_name, f_name, comp, variable_name)
+                            variable_name, self.get_field_table(w_obj.w, table.name), f_name, comp, variable_name)
                     else:
                         where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s :%s)\';\n' % (
-                            variable_name, self.table_name, f_name, comp, variable_name)
+                            variable_name, self.get_field_table(w_obj.w, table.name), f_name, comp, variable_name)
                     where_str += '\t' * 3 + '$sql .= \' AND \' . $sql_%s;\n' % variable_name
                     where_str += '\t' * 2 + '}\n'
 
@@ -849,6 +843,18 @@ class Make(object):
         else:
             return s
 
+    def get_field_table(self, w, table_name):
+        field_table = ''
+        if 'table_prefix' in w:
+            field_table += w['table_prefix']
+        if 'table' in w:
+            field_table += w['table']
+        else:
+            field_table += table_name
+        if not field_table:
+            field_table = self.table_name
+        return field_table
+
     def deal_where_tree(self, where, table, suffix=''):
         tb_name = table.name
         where_str = ''
@@ -917,10 +923,10 @@ class Make(object):
 
                 if comp in ('in', 'not in'):
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
-                        variable_name, self.table_name, child['name'], comp, variable_name)
+                        variable_name, self.get_field_table(child, table.name), child['name'], comp, variable_name)
                 else:
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s :%s)\';\n' % (
-                        variable_name, self.table_name, child['name'], comp, variable_name)
+                        variable_name, self.get_field_table(child, table.name), child['name'], comp, variable_name)
                 where_str += '\t' * 2 + '}\n'
                 combine_sql += '\t' * 2 + 'if (strlen($sql_%s) > 0)\n' % variable_name
                 combine_sql += '\t' * 2 + '{\n'
