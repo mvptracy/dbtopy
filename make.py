@@ -257,6 +257,7 @@ class Make(object):
     def make_php_file(self, table, tables_namespace, tables_config, tables_db_type, tables_prefix):
         self.class_name = self.get_class_name(table.name)
         self.table_name = table.prefix + table.name
+        self.table_prefix = table.prefix
 
         head_str = '<?php\n'
         head_str += '//File Name: %s.php\n' % self.class_name
@@ -280,8 +281,10 @@ class Make(object):
         real_del_str = self.get_default_delreal_str(table)
         create_str = self.get_default_create_str(table)
         trans_str = self.get_default_trans_str(table)
-        custom_str = self.get_custom_upd_str(table)
-        w_str = head_str + get_table_name_str + add_str + upd_str + del_str + real_del_str + create_str + trans_str + custom_str + bottom_str
+        custom_upd_str = self.get_custom_upd_str_new(table)
+        custom_del_str = self.get_custom_del_str(table)
+
+        w_str = head_str + get_table_name_str + add_str + upd_str + del_str + real_del_str + create_str + trans_str + custom_upd_str + custom_del_str + bottom_str
         self.__write_file(self.class_name + '.php', w_str)
         self.__write_file(
             '/Users/tracy/work/project/meiyu/php/server/application/library/Test/Data/' + self.class_name + '.php',
@@ -699,7 +702,7 @@ class Make(object):
                     sql_name = tree[1]
                     where_str += '\t' * 2 + 'if (strlen($%s) > 0)\n' % sql_name
                     where_str += '\t' * 2 + '{\n'
-                    where_str += '\t' * 3 + '$sql .= \' AND (\' . $%s . \')\';\n'% sql_name
+                    where_str += '\t' * 3 + '$sql .= \' AND (\' . $%s . \')\';\n' % sql_name
                     where_str += '\t' * 2 + '}\n'
 
                 else:
@@ -733,7 +736,6 @@ class Make(object):
                         where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
                             variable_name,
                             self.get_bind_value(table.field_list[f_name], variable_name))
-
 
                     if 'comp' in w_obj.w and w_obj.w['comp'] in ('in', 'not in'):
                         where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
@@ -780,6 +782,124 @@ class Make(object):
             final_str += '\t}\n\n'
 
             # print(final_str)
+        return final_str
+
+    def get_custom_upd_str_new(self, table):
+        final_str = ''
+        for upd_obj in table.update:
+            func_doc_comment = ''
+            param_str = ''
+            bind_str = ''
+            where_str = ''
+            upd_str = ''
+            self.tree_func_doc_comment = ''
+            self.tree_param_str = ''
+
+            # 更新的字段
+            for (f_name, f) in upd_obj.field_list.items():
+                self.tree_func_doc_comment += '\t * @param $%s\n' % f_name
+                bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
+                upd_str += '\t' * 2 + '$sql .= \', %s = :%s\';\n' % (self.add_field_symbol(f_name), f_name)
+                if self.tree_param_str == '':
+                    self.tree_param_str += '\t' * 2 + '$%s\n' % f_name
+                else:
+                    self.tree_param_str += '\t' * 2 + ', $%s\n' % f_name
+
+            # where
+            wlist = []
+            for where in upd_obj.where_list:
+                wlist.append(where.w)
+
+
+            tree = self.deal_where_tree_new({'child': wlist}, table)
+
+            func_doc_comment = self.tree_func_doc_comment
+            param_str = self.tree_param_str
+            where_str += tree[0]
+
+            if upd_obj.lock == 'true':
+                where_str += '\t' * 2 + '$bind[\':verid\'] = $oldVerId;\n'
+                where_str += '\t' * 2 + '$sql .= \' AND verid=:verid\';\n'
+                func_doc_comment += '\t * @param (=) $oldVerId\n'
+                param_str += '\t' * 2 + ', $oldVerId\n'
+            final_str += '\t/**\n'
+            final_str += '\t * %s\n' % upd_obj.desc
+            final_str += func_doc_comment
+            final_str += '\t */\n'
+            final_str += '\tpublic static function %s(\n' % upd_obj.name
+            final_str += param_str
+            final_str += '\t)\n'
+            final_str += '\t{\n'
+            final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::%s\']))\n' % (
+                self.deal_namespace(table.namespace), self.class_name, upd_obj.name)
+            final_str += '\t' * 2 + '{\n'
+            final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::%s\'];\n' % (
+                self.deal_namespace(table.namespace), self.class_name, upd_obj.name)
+            final_str += '\t' * 2 + '}\n'
+            final_str += '\t' * 2 + '$bind = [\n'
+            final_str += bind_str
+            final_str += '\t' * 2 + '];\n'
+            final_str += '\t' * 2 + '$datetime = new \DateTime;\n'
+            final_str += '\t' * 2 + '$curDateTime = $datetime->format(\'Y-m-d H:i:s\');\n'
+            final_str += '\t' * 2 + '$sql = \'UPDATE %s SET \';\n' % self.add_field_symbol(self.table_name)
+            final_str += '\t' * 2 + '$sql .= \'update_time = \\\'\' . $curDateTime . \'\\\'\';\n'
+            final_str += '\t' * 2 + '$sql .= \', verid = verid + 1\';\n'
+            final_str += upd_str
+            final_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
+            final_str += where_str
+            final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+            final_str += '\t' * 2 + 'return $db->update( $sql, $bind );\n'
+            final_str += '\t}\n\n'
+
+        return final_str
+
+    def get_custom_del_str(self, table):
+        final_str = ''
+        for del_obj in table.delete:
+            func_doc_comment = ''
+            param_str = ''
+            bind_str = ''
+            where_str = ''
+
+            wlist = []
+            for where in del_obj.where_list:
+                wlist.append(where.w)
+
+            self.tree_func_doc_comment = ''
+            self.tree_param_str = ''
+            tree = self.deal_where_tree_new({'child':wlist}, table)
+
+            func_doc_comment = self.tree_func_doc_comment
+            param_str = self.tree_param_str
+            where_str = tree[0]
+
+            final_str += '\t/**\n'
+            final_str += '\t * %s\n' % del_obj.desc
+            final_str += func_doc_comment
+            final_str += '\t */\n'
+            final_str += '\tpublic static function %s(\n' % del_obj.name
+            final_str += param_str
+            final_str += '\t)\n'
+            final_str += '\t{\n'
+            final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::%s\']))\n' % (
+                self.deal_namespace(table.namespace), self.class_name, del_obj.name)
+            final_str += '\t' * 2 + '{\n'
+            final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::%s\'];\n' % (
+                self.deal_namespace(table.namespace), self.class_name, del_obj.name)
+            final_str += '\t' * 2 + '}\n'
+            final_str += '\t' * 2 + '$datetime = new \DateTime;\n'
+            final_str += '\t' * 2 + '$curDateTime = $datetime->format(\'Y-m-d H:i:s\');\n'
+
+            if del_obj.real == 'false':
+                final_str += '\t' * 2 + '$sql = \'UPDATE `%s` SET update_time = \\\'\' . $curDateTime . \'\\\', del=1\';\n' % self.table_name
+            else:
+                final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s`\';\n' % self.table_name
+            final_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
+            final_str += where_str
+            final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+            final_str += '\t' * 2 + 'return $db->%s( $sql, $bind );\n' % ('update' if del_obj.real == 'false' else 'delete')
+            final_str += '\t}\n\n'
+
         return final_str
 
     def get_default_get_str(self):
@@ -847,12 +967,17 @@ class Make(object):
         field_table = ''
         if 'table_prefix' in w:
             field_table += w['table_prefix']
+        else:
+            field_table += self.table_prefix
+
         if 'table' in w:
             field_table += w['table']
         else:
             field_table += table_name
+
         if not field_table:
             field_table = self.table_name
+
         return field_table
 
     def deal_where_tree(self, where, table, suffix=''):
@@ -905,14 +1030,14 @@ class Make(object):
                 else:
                     comp = self.replace_spec_string(child['comp'])
 
-
                 # 字段运算式
                 if 'value' in child:
                     # 有默认值
                     where_str += '\t' * 2 + 'if ( true )\n'
                     where_str += '\t' * 2 + '{\n'
                     where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
-                        variable_name, self.get_bind_value(table.field_list[child['name']], variable_name, child['value']))
+                        variable_name,
+                        self.get_bind_value(table.field_list[child['name']], variable_name, child['value']))
                 else:
                     self.tree_func_doc_comment += '\t * @param (%s) $%s\n' % (comp, variable_name)
                     self.tree_param_str += '\t' * 2 + ', $%s\n' % variable_name
@@ -941,3 +1066,124 @@ class Make(object):
         where_str += '\n//table:%s, name:%s, suffix:%s\n' % (tb_name, where['name'], where['type'])
         where_str += combine_sql
         return [where_str, sql_w_name]
+
+    def deal_where_tree_new(self, where_list, table, suffix=''):
+        tb_name = table.name
+        where_str = ''
+        where_suffix = ''
+        where_name = ''
+        if 'type' in where_list:
+            type = where_list['type'].upper()
+            if 'name' in where_list:
+                where_suffix = '_' + where_list['name']
+                where_name = where_list['name']
+            else:
+                where_suffix = '_'
+        else:
+            type = 'AND'
+
+        if suffix:
+            where_suffix += suffix
+
+        if where_suffix:
+            sql_name = 'sql_' + tb_name + where_suffix + '_'
+        else:
+            sql_name = 'sql'
+
+        variable_name_list = []
+        for row in where_list['child']:
+
+            if 'child' not in row:
+                # 处理参数名
+                f_name = row['name']
+                if 'suffix' in row:
+                    variable_name = table.name + '_' + f_name + '_' + row['suffix'] + where_suffix
+                else:
+                    variable_name = table.name + '_' + f_name + '_' + 'cond' + where_suffix
+
+                if 'comp' in row:
+                    if 'in' == row['comp']:
+                        variable_name += '_include'
+                    elif 'not in' == row['comp']:
+                        variable_name += '_exclude'
+                    comp = self.replace_spec_string(row['comp']).upper()
+                else:
+                    comp = '='
+
+                if 'value' in row:
+                    # 有默认值
+                    where_str += '\t' * 2 + 'if ( true )\n'
+                    where_str += '\t' * 2 + '{\n'
+                    if comp in ('IN', 'NOT IN'):
+                        where_str +=  '\t' * 3 + '$%s = \'%s\';\n' % (variable_name, row['value'])
+                        where_str +=  '\t' * 3 + '$%s = trim($%s, \'()\\s\');\n' % (variable_name, variable_name)
+                        where_str +=  '\t' * 3 + '$bind[\':%s\'] = explode(\',\', $%s);\n' % (variable_name, variable_name)
+                    else:
+                        where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
+                            variable_name,
+                            self.get_bind_value(table.field_list[f_name], variable_name, row['value']))
+                else:
+                    self.tree_func_doc_comment += '\t * @param (%s) $%s\n' % (comp, variable_name)
+                    if self.tree_param_str:
+                        self.tree_param_str += '\t' * 2 + ', $%s\n' % variable_name
+                    else:
+                        self.tree_param_str += '\t' * 2 + '$%s\n' % variable_name
+                    where_str += '\t' * 2 + 'if ( false !== $%s )\n' % variable_name
+                    where_str += '\t' * 2 + '{\n'
+                    if comp in ('IN', 'NOT IN'):
+                        where_str += '\t' * 3 + 'if (!is_array($%s))\n' % variable_name
+                        where_str += '\t' * 3 + '{\n'
+                        where_str += '\t' * 4 + '$%s = explode(\',\', $%s);\n' % (variable_name, variable_name)
+                        where_str += '\t' * 3 + '}\n'
+                        where_str += '\t' * 3 + '$bind[\':%s\'] = $%s;\n' % (
+                        variable_name, variable_name)
+                    else:
+                        where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
+                            variable_name,
+                            self.get_bind_value(table.field_list[f_name], variable_name))
+
+                if comp in ('IN', 'NOT IN'):
+                    where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
+                        variable_name, self.get_field_table(row, table.name), f_name, comp, variable_name)
+                else:
+                    where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s :%s)\';\n' % (
+                        variable_name, self.get_field_table(row, table.name), f_name, comp, variable_name)
+                where_str += '\t' * 2 + '}\n'
+
+                variable_name_list.append(variable_name)
+            else:
+                # 嵌套
+                tree = self.deal_where_tree_new(row, table, where_suffix)
+                where_str += tree[0]
+                variable_name_list.append(tree[1])
+
+        #type拼接
+        where_str += '\n\t\t// table:' + tb_name + ', name:' + where_name + ' type:' + type + '\n'
+        if sql_name != 'sql':
+            where_str += '\t' * 2 + '$%s = \'\';\n' % sql_name
+            where_str += '\t' * 2 + '$first = true;\n'
+
+        for v in variable_name_list:
+            if sql_name == 'sql':
+                where_str += '\t' * 2 + 'if (false !== $sql_%s)\n' % v
+                where_str += '\t' * 2 + '{\n'
+                where_str += '\t' * 3 + '$sql .= \' AND \' . $sql_%s;\n' % v
+                where_str += '\t' * 2 + '}\n'
+            else:
+                where_str += '\t' * 2 + 'if(strlen($sql_%s) > 0)\n' % v
+                where_str += '\t' * 2 + '{\n'
+                where_str += '\t' * 3 + 'if(!$first)\n'
+                where_str += '\t' * 3 + '{\n'
+                where_str += '\t' * 4 + '$%s .= \' %s \';\n' % (sql_name, type)
+                where_str += '\t' * 3 + '}\n'
+                where_str += '\t' * 3 + '$%s .= $sql_%s;\n' % (sql_name, v)
+                where_str += '\t' * 3 + '$first = false;\n'
+                where_str += '\t' * 2 + '}\n'
+                where_str += '\t' * 2 + 'if(!$first)\n'
+
+        if sql_name != 'sql':
+            where_str += '\t' * 2 + '{\n'
+            where_str += '\t' * 3 + '$%s = \'(\' . $%s . \')\';\n' % (sql_name, sql_name)
+            where_str += '\t' * 2 + '}\n'
+
+        return [where_str, sql_name[4:]]
