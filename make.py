@@ -4,11 +4,12 @@ from dbtopy.field import Field
 class Make(object):
     MYSQL_NAMESPACE = '\\Sooh\\DB\\PdoMysql'
 
-    def __init__(self, n):
+    def __init__(self, n, tables):
         if n == 1:
             self.write_mode = 'w'
         else:
             self.write_mode = 'a'
+        self.tables = tables
 
     def make_add_sql(self, table):
         sql = ''
@@ -123,10 +124,10 @@ class Make(object):
                 sql += ',\n'
 
             # default field
-            sql += '\t`verid` bigint,\n'
-            sql += '\t`create_time` datetime,\n'
-            sql += '\t`update_time` datetime,\n'
-            sql += '\t`del` tinyint,\n'
+            # sql += '\t`verid` bigint,\n'
+            # sql += '\t`create_time` datetime,\n'
+            # sql += '\t`update_time` datetime,\n'
+            # sql += '\t`del` tinyint,\n'
 
             # index
             if table.primary_key != '':
@@ -173,18 +174,20 @@ class Make(object):
             field_str += '\t`' + field.name + '`,\n'
             if field.type in Field.INT_TYPE:
                 value_str += '\t0,\n'
+            elif field.type == 'datetime':
+                value_str += '\t\'0000-00-00 00:00:00\',\n'
             else:
                 value_str += '\t\'\',\n'
 
         # default
-        field_str += '\t`verid`,\n'
-        field_str += '\t`create_time`,\n'
-        field_str += '\t`update_time`,\n'
-        field_str += '\t`del`\n'
-        value_str += '\t1,\n'
-        value_str += '\t\'0000-00-00 00:00:00\',\n'
-        value_str += '\t\'0000-00-00 00:00:00\',\n'
-        value_str += '\t\'0000-00-00 00:00:00\'\n'
+        # field_str += '\t`verid`,\n'
+        # field_str += '\t`create_time`,\n'
+        # field_str += '\t`update_time`,\n'
+        # field_str += '\t`del`\n'
+        # value_str += '\t1,\n'
+        # value_str += '\t\'0000-00-00 00:00:00\',\n'
+        # value_str += '\t\'0000-00-00 00:00:00\',\n'
+        # value_str += '\t0,\n'
 
         sql = field_str
         sql += ') values (\n'
@@ -254,7 +257,7 @@ class Make(object):
             fp.write(content)
 
     # 写php文件
-    def make_php_file(self, table, tables_namespace, tables_config, tables_db_type, tables_prefix):
+    def make_php_file(self, table):
         self.class_name = self.get_class_name(table.name)
         self.table_name = table.prefix + table.name
         self.table_prefix = table.prefix
@@ -281,10 +284,15 @@ class Make(object):
         real_del_str = self.get_default_delreal_str(table)
         create_str = self.get_default_create_str(table)
         trans_str = self.get_default_trans_str(table)
-        custom_upd_str = self.get_custom_upd_str_new(table)
         custom_del_str = self.get_custom_del_str(table)
+        custom_upd_str = self.get_custom_upd_str(table)
+        get_str = self.get_default_get_str(table)
+        getall_str = self.get_default_getall_str(table)
+        gettop_str = self.get_default_gettop_str(table)
+        get_by_index_str = self.get_by_index_str(table)
+        custom_select_str = self.get_custom_select_str(table)
 
-        w_str = head_str + get_table_name_str + add_str + upd_str + del_str + real_del_str + create_str + trans_str + custom_upd_str + custom_del_str + bottom_str
+        w_str = head_str + get_table_name_str + add_str + upd_str + del_str + real_del_str + create_str + trans_str + custom_del_str + custom_upd_str + get_str + getall_str + gettop_str + get_by_index_str + custom_select_str + bottom_str
         self.__write_file(self.class_name + '.php', w_str)
         self.__write_file(
             '/Users/tracy/work/project/meiyu/php/server/application/library/Test/Data/' + self.class_name + '.php',
@@ -545,7 +553,6 @@ class Make(object):
             final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
             final_str += '\t' * 2 + '$db->query( $sql );\n'
             final_str += '\t}\n\n'
-            print(final_str)
             return final_str
         else:
             sql = ''
@@ -667,7 +674,7 @@ class Make(object):
 
         return final_str
 
-    def get_custom_upd_str_new(self, table):
+    def get_custom_upd_str(self, table):
         final_str = ''
         for upd_obj in table.update:
             func_doc_comment = ''
@@ -692,7 +699,6 @@ class Make(object):
             wlist = []
             for where in upd_obj.where_list:
                 wlist.append(where.w)
-
 
             tree = self.deal_where_tree({'child': wlist}, table)
 
@@ -750,7 +756,7 @@ class Make(object):
             for where in del_obj.where_list:
                 wlist.append(where.w)
 
-            tree = self.deal_where_tree({'child':wlist}, table)
+            tree = self.deal_where_tree({'child': wlist}, table)
 
             func_doc_comment = self.tree_func_doc_comment
             param_str = self.tree_param_str
@@ -780,19 +786,310 @@ class Make(object):
             final_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
             final_str += where_str
             final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
-            final_str += '\t' * 2 + 'return $db->%s( $sql, $bind );\n' % ('update' if del_obj.real == 'false' else 'delete')
+            final_str += '\t' * 2 + 'return $db->%s( $sql, $bind );\n' % (
+                'update' if del_obj.real == 'false' else 'delete')
             final_str += '\t}\n\n'
 
         return final_str
 
-    def get_default_get_str(self):
-        pass
+    def get_default_get_str(self, table):
+        func_doc_comment = ''
+        param_str = ''
+        bind_str = ''
+        where_str = ''
 
-    def get_default_getall_str(self):
-        pass
+        func_doc_comment += '\t' + '/**\n'
+        func_doc_comment += '\t' + ' * get a record.\n'
+        for f_name in table.primary_key.replace(' ', '').split(','):
+            field_obj = table.field_list[f_name]
+            func_doc_comment += '\t' + ' * @param  $%s  %s\n' % (f_name, field_obj.desc)
+            if param_str == '':
+                param_str += '\t' * 2 + '$%s\n' % f_name
+            else:
+                param_str += '\t' * 2 + ', $%s\n' % f_name
+            bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(field_obj))
+            if where_str == '':
+                where_str += ' . \'`%s` = :%s\'' % (f_name, f_name)
+            else:
+                where_str += ' . \' AND `%s` = :%s\'' % (f_name, f_name)
 
-    def get_default_gettop_str(self):
-        pass
+        func_doc_comment += '\t' + ' * @param $startRecordTimestamp\n'
+        func_doc_comment += '\t' + ' * @param $endRecordTimestamp\n'
+        func_doc_comment += '\t' + ' * @return a record or false if record not exist.\n'
+        func_doc_comment += '\t' + ' */\n'
+
+        final_str = ''
+        final_str += func_doc_comment
+        final_str += '\t' + 'public static function get(\n'
+        final_str += param_str
+        final_str += '\t)\n'
+        final_str += '\t{\n'
+        final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::get\']))\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '{\n'
+        final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::get\'];\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '}\n'
+        final_str += '\t' * 2 + '$bind = [\n'
+        final_str += bind_str
+        final_str += '\t' * 2 + '];\n'
+        final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s` WHERE \'' % self.table_name
+        final_str += where_str
+        if table.logic_del == 'true':
+            final_str += ' . \' AND del=0\';\n'
+        else:
+            final_str += ';\n'
+        final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+        final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
+        final_str += '\t' * 2 + 'if (!$rs || 0 == count($rs))\n\t\t{\n\t\t\treturn false;\n\t\t}\n'
+        final_str += self.deal_result_to_timestamp(table, 'true')
+        final_str += '\t' * 2 + 'return $rs;\n'
+        final_str += '\t}\n\n'
+
+        return final_str
+
+    def get_default_getall_str(self, table):
+        final_str = ''
+        final_str += '\t' + '/**\n'
+        final_str += '\t' + ' * get all records.\n'
+        final_str += '\t' + ' * @return record array.\n'
+        final_str += '\t' + ' */\n'
+        final_str += '\t' + 'public static function getAll()\n'
+        final_str += '\t' + '{\n'
+        final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::getAll\']))\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '{\n'
+        final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::getAll\'];\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '}\n'
+        final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s`' % self.table_name
+        if table.logic_del == 'true':
+            final_str += ' WHERE del=0'
+        final_str += '\';\n'
+        final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+        final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql );\n'
+        final_str += self.deal_result_to_timestamp(table, 'false')
+        final_str += '\t' * 2 + 'return $rs;\n'
+        final_str += '\t' + '}\n'
+
+        return final_str
+
+    def get_default_gettop_str(self, table):
+        final_str = ''
+        final_str += '\t' + '/**\n'
+        final_str += '\t' + ' * get top record.\n'
+        final_str += '\t' + ' * @return record array.\n'
+        final_str += '\t' + ' */\n'
+        final_str += '\t' + 'public static function getTop($num = 1)\n'
+        final_str += '\t' + '{\n'
+        final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::getTop\']))\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '{\n'
+        final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::getTop\'];\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '}\n'
+        final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s`' % self.table_name
+        if table.logic_del == 'true':
+            final_str += ' WHERE del=0'
+        final_str += ' LIMIT 0, \' . $num;\n'
+        final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+        final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql );\n'
+        final_str += self.deal_result_to_timestamp(table, 'false')
+        final_str += '\t' * 2 + 'return $rs;\n'
+        final_str += '\t' + '}\n'
+
+        return final_str
+
+    def get_by_index_str(self, table):
+        index_list = []
+        final_str = ''
+        for (index_name, index_obj) in table.index_list.items():
+            t = {}
+            t['name'] = index_obj.name
+            t['value'] = index_obj.value
+            t['unique'] = index_obj.unique
+            index_list.append(t)
+        # primary key
+        t = {}
+        t['name'] = table.primary_key
+        t['value'] = table.primary_key
+        t['unique'] = 'true'
+        index_list.append(t)
+        for index in index_list:
+            param_str = ''
+            func_doc_comment = ''
+            bind_str = ''
+            where_str = ''
+            func_name = 'getBy'
+
+            for f_name in index['value'].replace(' ','') .split(','):
+                func_name += f_name.capitalize()
+                func_doc_comment += '\t' + ' * @param  $%s  %s\n' % (f_name, table.field_list[f_name].desc)
+                bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
+
+                if param_str == '':
+                    param_str += '\t' * 2 + '$%s\n' % f_name
+                else:
+                    param_str += '\t' * 2 + ', $%s\n' % f_name
+
+                if where_str == '':
+                    where_str += ' . \'`%s` = :%s\'' % (f_name, f_name)
+                else:
+                    where_str += ' . \' AND `%s` = :%s\'' % (f_name, f_name)
+
+            final_str += '\t' + '/**\n'
+            final_str += '\t' + ' * get data by %s\n' % index['name']
+            final_str += func_doc_comment
+            final_str += '\t' + ' */\n'
+            final_str += '\t' + 'public static function %s(\n' % func_name
+            final_str += param_str
+            final_str += '\t)\n'
+            final_str += '\t{\n'
+            final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::%s\']))\n' % (
+                self.deal_namespace(table.namespace), self.class_name, func_name)
+            final_str += '\t' * 2 + '{\n'
+            final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::%s\'];\n' % (
+                self.deal_namespace(table.namespace), self.class_name, func_name)
+            final_str += '\t' * 2 + '}\n'
+            final_str += '\t' * 2 + '$bind = [\n'
+            final_str += bind_str
+            final_str += '\t' * 2 + '];\n'
+            final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s` WHERE \'' % self.table_name
+            final_str += where_str
+            if table.logic_del == 'true':
+                final_str += ' . \' AND del=0\';\n'
+            else:
+                final_str += ';\n'
+            final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+            if index['unique'] == 'true':
+                final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
+            else:
+                final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql, $bind );\n'
+            final_str += '\t' * 2 + 'if (!$rs || 0 == count($rs))\n\t\t{\n\t\t\treturn false;\n\t\t}\n'
+            final_str += self.deal_result_to_timestamp(table, index['unique'])
+            final_str += '\t' * 2 + 'return $rs;\n'
+            final_str += '\t' + '}\n\n'
+
+        return final_str
+
+    def get_custom_select_str(self, table):
+        final_str = ''
+        self.table_prefix = table.prefix
+
+        for sel_obj in table.select:
+            func_doc_comment = ''
+            param_str = ''
+            bind_str = ''
+            where_str = ''
+            fields_str = ''
+            join_str = ''
+            self.tree_func_doc_comment = ''
+            self.tree_param_str = ''
+
+            if sel_obj.join_list:
+                has_join = True
+            else:
+                has_join = False
+
+            datetime_fields = []
+            # 查询的字段
+            for f in sel_obj.field_list:
+                f_name = f['name']
+
+                if f_name == '*':
+                    break
+
+                if f_name in self.tables.table[f.get('table', table.name)].field_list:
+                    f_obj = self.tables.table[f.get('table', table.name)].field_list[f_name]
+                    if f_obj.type == 'datetime' and f_name not in ('create_time', 'update_time') and f.get('origin', 'false') == 'false':
+                        datetime_fields.append(f_name)
+
+                if f.get('origin', 'false') == 'false':
+                    f_name = self.add_field_symbol(f_name)
+
+                if has_join:
+                    f_name = '`%s`.' % (f.get('table_prefix',table.prefix ) + f.get('table',table.name)) + f_name
+
+                if f.get('unique', 'false') == 'true':
+                    f_name = 'DISTINCT ' + f_name
+
+                if f.get('func') and f['func'] in ('sum','count','max','min'):
+                    f_name = '%s(%s)' % (f['func'].upper(), f_name)
+
+                if f.get('alias'):
+                    f_name += ' AS %s' % f['alias']
+                fields_str += f_name + ', '
+
+            # 无field查*
+            if fields_str == '':
+                fields_str = '*'
+                for (k, f) in table.field_list.items():
+                    if f.type == 'datetime':
+                        datetime_fields.append(f.name)
+            else:
+                fields_str = fields_str[:-2]
+
+            # join
+            join_tables = []
+            for j in sel_obj.join_list:
+                join_str += self.deal_join(j.join)
+                join_tables.append(j.join.get('table_prefix', self.table_prefix) + j.join['table'])
+                if fields_str == '*':
+                    for (k,f) in self.tables.table[j.join['table']].field_list.items():
+                        if f.type == 'datetime':
+                            datetime_fields.append(f.name)
+
+
+            # where
+            if sel_obj.logic_del == 'true' and len(join_tables) == 0:
+                where_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
+            elif sel_obj.logic_del == 'true' and len(join_tables) > 0:
+                where_str += '\t' * 2 + '$sql .= \' WHERE `%s`.del=0' % self.table_name
+                for tb_name in join_tables:
+                    where_str += ' AND `%s`.del=0' % tb_name
+                where_str += '\';\n'
+            else:
+                where_str += '\t' * 2 + '$sql .= \' WHERE 1\';\n'
+
+            wlist = []
+            for where in sel_obj.where_list:
+                wlist.append(where.w)
+
+            tree = self.deal_where_tree({'child': wlist}, table)
+            func_doc_comment = self.tree_func_doc_comment
+            param_str = self.tree_param_str
+            where_str += tree[0]
+
+            final_str += '\t/**\n'
+            final_str += '\t * %s\n' % sel_obj.desc
+            final_str += func_doc_comment
+            final_str += '\t */\n'
+            final_str += '\tpublic static function %s(\n' % sel_obj.name
+            final_str += param_str
+            final_str += '\t)\n'
+            final_str += '\t{\n'
+            final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::%s\']))\n' % (
+                self.deal_namespace(table.namespace), self.class_name, sel_obj.name)
+            final_str += '\t' * 2 + '{\n'
+            final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::%s\'];\n' % (
+                self.deal_namespace(table.namespace), self.class_name, sel_obj.name)
+            final_str += '\t' * 2 + '}\n'
+            final_str += '\t' * 2 + '$bind = [];\n'
+            final_str += '\t' * 2 + '$sql = \'SELECT %s FROM `%s`\';\n' % (fields_str, self.table_name)
+            final_str += join_str
+            final_str += where_str
+            final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+            if sel_obj.single == 'true':
+                final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
+            else:
+                final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql, $bind );\n'
+            if final_str == '*':
+                final_str += deal_result_to_timestamp(table,)
+            final_str += self.deal_result_to_timestamp_fields(datetime_fields, sel_obj.single)
+            final_str += '\t' * 2 + 'return $rs;\n'
+            final_str += '\t' + '}\n\n'
+
+        return final_str
 
     @staticmethod
     # 获取类名
@@ -890,12 +1187,14 @@ class Make(object):
         for row in where_list['child']:
 
             if 'child' not in row:
+                field_table_prefix = row.get('table_prefix', table.prefix)
+                field_table_name = row.get('table', table.name)
                 # 处理参数名
                 f_name = row['name']
                 if 'suffix' in row:
-                    variable_name = table.name + '_' + f_name + '_' + row['suffix'] + where_suffix
+                    variable_name = field_table_name + '_' + f_name + '_' + row['suffix'] + where_suffix
                 else:
-                    variable_name = table.name + '_' + f_name + '_' + 'cond' + where_suffix
+                    variable_name = field_table_name + '_' + f_name + '_' + 'cond' + where_suffix
 
                 if 'comp' in row:
                     if 'in' == row['comp']:
@@ -911,13 +1210,14 @@ class Make(object):
                     where_str += '\t' * 2 + 'if ( true )\n'
                     where_str += '\t' * 2 + '{\n'
                     if comp in ('IN', 'NOT IN'):
-                        where_str +=  '\t' * 3 + '$%s = \'%s\';\n' % (variable_name, row['value'])
-                        where_str +=  '\t' * 3 + '$%s = trim($%s, \'()\\s\');\n' % (variable_name, variable_name)
-                        where_str +=  '\t' * 3 + '$bind[\':%s\'] = explode(\',\', $%s);\n' % (variable_name, variable_name)
+                        where_str += '\t' * 3 + '$%s = \'%s\';\n' % (variable_name, row['value'])
+                        where_str += '\t' * 3 + '$%s = trim($%s, \'()\\s\');\n' % (variable_name, variable_name)
+                        where_str += '\t' * 3 + '$bind[\':%s\'] = explode(\',\', $%s);\n' % (
+                        variable_name, variable_name)
                     else:
                         where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
                             variable_name,
-                            self.get_bind_value(table.field_list[f_name], variable_name, row['value']))
+                            self.get_bind_value(self.tables.table[field_table_name].field_list[f_name], variable_name, row['value']))
                 else:
                     self.tree_func_doc_comment += '\t * @param (%s) $%s\n' % (comp, variable_name)
                     if self.tree_param_str:
@@ -932,11 +1232,11 @@ class Make(object):
                         where_str += '\t' * 4 + '$%s = explode(\',\', $%s);\n' % (variable_name, variable_name)
                         where_str += '\t' * 3 + '}\n'
                         where_str += '\t' * 3 + '$bind[\':%s\'] = $%s;\n' % (
-                        variable_name, variable_name)
+                            variable_name, variable_name)
                     else:
                         where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
                             variable_name,
-                            self.get_bind_value(table.field_list[f_name], variable_name))
+                            self.get_bind_value(self.tables.table[field_table_name].field_list[f_name], variable_name))
 
                 if comp in ('IN', 'NOT IN'):
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
@@ -953,7 +1253,7 @@ class Make(object):
                 where_str += tree[0]
                 variable_name_list.append(tree[1])
 
-        #type拼接
+        # type拼接
         where_str += '\n\t\t// table:' + tb_name + ', name:' + where_name + ' type:' + type + '\n'
         if sql_name != 'sql':
             where_str += '\t' * 2 + '$%s = \'\';\n' % sql_name
@@ -983,3 +1283,81 @@ class Make(object):
             where_str += '\t' * 2 + '}\n'
 
         return [where_str, sql_name[4:]]
+
+    def deal_result_to_timestamp(self, table, unique):
+        final_str = ''
+        if unique == 'true':
+            for (f_name, field_obj) in table.field_list.items():
+                if field_obj.type == 'datetime':
+                    final_str += '\t' * 2 + '$rs[\'%s\'] = %s::dbTime2Timestamp($rs[\'%s\']);\n' % (
+                        field_obj.name, self.MYSQL_NAMESPACE, field_obj.name)
+
+            # final_str += '\t' * 2 + '$rs[\'create_time\'] = %s::dbTime2Timestamp($rs[\'create_time\']);\n' % self.MYSQL_NAMESPACE
+            # final_str += '\t' * 2 + '$rs[\'update_time\'] = %s::dbTime2Timestamp($rs[\'update_time\']);\n' % self.MYSQL_NAMESPACE
+        else:
+            final_str += '\t' * 2 + 'if ($rs)\n'
+            final_str += '\t' * 2 + '{\n'
+            final_str += '\t' * 3 + 'foreach($rs as $k => $v)\n'
+            final_str += '\t' * 3 + '{\n'
+
+            for (f_name, field_obj) in table.field_list.items():
+                if field_obj.type == 'datetime':
+                    final_str += '\t' * 4 + '$v[\'%s\'] = %s::dbTime2Timestamp($v[\'%s\']);\n' % (
+                        field_obj.name, self.MYSQL_NAMESPACE, field_obj.name)
+
+            # final_str += '\t' * 4 + '$v[\'create_time\'] = %s::dbTime2Timestamp($v[\'create_time\']);\n' % self.MYSQL_NAMESPACE
+            # final_str += '\t' * 4 + '$v[\'update_time\'] = %s::dbTime2Timestamp($v[\'update_time\']);\n' % self.MYSQL_NAMESPACE
+            final_str += '\t' * 4 + '$rs[$k] = $v;\n'
+            final_str += '\t' * 3 + '}\n'
+            final_str += '\t' * 2 + '}\n'
+
+        return final_str
+
+    def deal_result_to_timestamp_fields(self, fields, unique):
+        fields = list(set(fields))
+        final_str = ''
+        if unique == 'true':
+            for f in fields:
+                final_str += '\t' * 2 + '$rs[\'%s\'] = %s::dbTime2Timestamp($rs[\'%s\']);\n' % (
+                    f, self.MYSQL_NAMESPACE, f)
+        else:
+            final_str += '\t' * 2 + 'if ($rs)\n'
+            final_str += '\t' * 2 + '{\n'
+            final_str += '\t' * 3 + 'foreach($rs as $k => $v)\n'
+            final_str += '\t' * 3 + '{\n'
+            for f in fields:
+                final_str += '\t' * 4 + '$v[\'%s\'] = %s::dbTime2Timestamp($v[\'%s\']);\n' % (
+                    f, self.MYSQL_NAMESPACE, f)
+            final_str += '\t' * 4 + '$rs[$k] = $v;\n'
+            final_str += '\t' * 3 + '}\n'
+            final_str += '\t' * 2 + '}\n'
+
+        return final_str
+
+    def deal_join(self, join):
+        join_str = '\t' * 2 + '$sql .= \' %s JOIN `%s` on \';\n' % (join['type'].upper(), join.get('table_prefix', self.table_prefix) + join['table'])
+        join_str += self.deal_join_cond(join)
+        return join_str
+
+    def deal_join_cond(self, cond, type='and'):
+        cond_str = ''
+        i = 0
+        if 'cond' in cond:
+            cond = cond['cond']
+        for c in cond:
+            if 'child' in c:
+                if i > 0:
+                    cond_str += '\t' * 2 + '$sql .= \' %s \';\n' % type.upper()
+                cond_str += '\t' * 2 + '$sql .= \'(\';\n';
+                cond_str += self.deal_join_cond(c['child'], c['type'])
+                cond_str += '\t' * 2 + '$sql .= \')\';\n';
+                i += 1
+            else:
+                if i > 0:
+                    cond_str += '\t' * 2 + '$sql .= \' %s \';\n' % type.upper()
+                cond_str += '\t' * 2 + '$sql .= \'(`%s`.`%s` = `%s`.`%s`)\';\n' % (
+                c.get('table_prefix1', self.table_prefix) + c['table1'], c['field1'],
+                c.get('table_prefix2', self.table_prefix) + c['table2'], c['field2'])
+                i += 1
+
+        return cond_str

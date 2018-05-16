@@ -23,7 +23,8 @@ class Field(object):
         self.__node = node
 
         # function
-        self.deal_xml()
+        if node:
+            self.deal_xml()
 
     def deal_xml(self):
         for (k, v) in self.__node.attributes.items():
@@ -52,5 +53,3 @@ class Field(object):
             self.type = 'bigint'
         else:
             self.type = 'int'
-
-

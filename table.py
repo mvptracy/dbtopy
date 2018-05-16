@@ -48,8 +48,8 @@ class Table(object):
         if self.prefix is None:
             self.prefix = self.__tables.prefix
 
-    def add_field(self, field):
-        if field.name not in self.field_name_list:
+    def add_field(self, field, default=False):
+        if field.name not in self.field_name_list or default:
             self.field_list[field.name] = field
             self.field_name_list.append(field.name)
             if field.primary == 'true':

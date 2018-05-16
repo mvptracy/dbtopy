@@ -69,6 +69,25 @@ class DB(object):
                         # print('deal select')
                         table.add_select(Select(node))
 
+                v = Field(None)
+                v.name = 'verid'
+                v.type = 'bigint'
+                table.add_field(v, True)
+
+                c = Field(None)
+                c.name = 'create_time'
+                c.type = 'datetime'
+                table.add_field(c, True)
+
+                u = Field(None)
+                u.name = 'update_time'
+                u.type = 'datetime'
+                table.add_field(u, True)
+
+                d = Field(None)
+                d.name = 'del'
+                d.type = 'tinyint'
+                table.add_field(d, True)
                 tables.add_table(table)
 
                 # 清空数据
@@ -84,15 +103,14 @@ class DB(object):
         n = 1
         for (tb_name, table) in self.tables.table.items():
             # 写sql文件
-            make = Make(n)
+            make = Make(n, self.tables)
             make.make_add_sql(table)
             make.make_drop_sql(table)
             make.make_insert_sql(table)
             make.make_create_sql(table)
 
             # 写php文件
-            make.make_php_file(table, self.tables.namespace, self.tables.config, self.tables.db_type,
-                               self.tables.prefix)
+            make.make_php_file(table)
             n += 1
 
     # def check_required(self, value, type, name):
@@ -114,5 +132,5 @@ class DB(object):
     #     print("\n".join(['%s:%s' % item for item in obj.__dict__.items()]))
 
 
-db = DB('/Users/tracy//work/project/meiyu/dic/test/db.xml')
+db = DB('/Users/tracy//work/project/meiyu/dic/customer/db.xml')
 db.do()

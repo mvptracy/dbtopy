@@ -11,9 +11,9 @@ class Select(object):
         self.single = 'false'
         self.page = 'false'
         self.logic_del = 'true'
-        self.field_list = {}  # {'id':{'name':'id';'value':'111'}}
-        self.where_list = []  # {where_obj, where_obj}
-        self.join_list = []  # {join_obj, join_obj}
+        self.field_list = []  # [{'name':'id';'value':'111'}]
+        self.where_list = []  # [where_obj, where_obj]
+        self.join_list = []  # [join_obj, join_obj]
 
         self.__node = node
 
@@ -26,7 +26,7 @@ class Select(object):
             else:
                 setattr(self, k, v)
 
-        for node in self.__node.childNodes:
+        for i, node in enumerate(self.__node.childNodes):
             if node.nodeType != node.ELEMENT_NODE:
                 continue
 
@@ -55,7 +55,7 @@ class Select(object):
                 if node.hasAttribute('origin') and node.getAttribute('origin') in ('true', 'false'):
                     field['origin'] = node.getAttribute('origin')
 
-                self.field_list[field['name']] = field
+                self.field_list.append(field)
 
             elif node.tagName == 'where':
                 self.where_list.append(Where(node))

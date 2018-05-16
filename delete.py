@@ -7,7 +7,6 @@ class Delete(object):
         self.name = ''
         self.desc = ''
         self.real = 'false'
-        self.field_list = {}  # {'id':{'name':'id';'value':'111'}}
         self.where_list = []  # {where_obj, where_obj}
 
         self.__node = node
@@ -25,16 +24,6 @@ class Delete(object):
             if node.nodeType != node.ELEMENT_NODE:
                 continue
 
-            if node.tagName == 'field':
-                field = {}
-                if node.hasAttribute('name'):
-                    field['name'] = node.getAttribute('name')
-
-                if node.hasAttribute('value'):
-                    field['value'] = node.getAttribute('value')
-
-                self.field_list[field['name']] = field
-
-            elif node.tagName == 'where':
+            if node.tagName == 'where':
                 self.where_list.append(Where(node))
 

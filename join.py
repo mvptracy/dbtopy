@@ -4,12 +4,12 @@ class Join(object):
 
     def __init__(self, node):
         self.node = node
-
-        self.w = self.deal_xml(node)
+        self.join = self.deal_xml(node)
 
     def deal_xml(self, node):
         join = {
-            'type': 'inner'
+            'type': 'inner',
+            'cond': []
         }
         if not node.hasAttribute('table'):
             raise AttributeError('join must need table')
@@ -24,11 +24,16 @@ class Join(object):
             for child_node in node.childNodes:
                 if child_node.nodeType == child_node.ELEMENT_NODE:
                     if child_node.tagName == 'cond':
-                        join['cond'] = self.deal_cond(child_node)
+                        join['cond'].append(self.deal_cond(child_node))
                     else:
                         raise AttributeError('join has attribute <cond> only')
         else:
             raise TypeError('select.join')
+
+        if len(join['cond']) == 0:
+            raise AttributeError('join has not <cond>')
+
+        return join
 
     def deal_cond(self, node):
         cond = {}
@@ -65,11 +70,11 @@ class Join(object):
             else:
                 raise AttributeError('join.cond field2 error')
 
-            if node.hasAttribute('table1_prefix') and node.getAttribute('table1_prefix'):
-                cond['table1_prefix'] = node.getAttribute('table1_prefix')
+            if node.hasAttribute('table_prefix1') and node.getAttribute('table_prefix1'):
+                cond['table_prefix1'] = node.getAttribute('table_prefix1')
 
-            if node.hasAttribute('table2_prefix') and node.getAttribute('table2_prefix'):
-                cond['table2_prefix'] = node.getAttribute('table2_prefix')
+            if node.hasAttribute('table_prefix2') and node.getAttribute('table_prefix2'):
+                cond['table_prefix2'] = node.getAttribute('table_prefix2')
 
             if node.hasAttribute('comp') and node.getAttribute('comp'):
                 cond['comp'] = self.replace_spec_string(node.getAttribute('comp'))
