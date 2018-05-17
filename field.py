@@ -29,9 +29,15 @@ class Field(object):
     def deal_xml(self):
         for (k, v) in self.__node.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('field attribute error:' + k)
+                raise AttributeError('field attribute invalid:' + k)
             else:
-                setattr(self, k, v)
+                setattr(self, k, v.strip())
+
+        if not self.name:
+            raise ValueError('field name invalid')
+
+        if not self.type:
+            raise ValueError('field type invalid')
 
         if self.type != 'int':
             self.unsigned = 'false'

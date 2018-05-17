@@ -16,9 +16,12 @@ class Delete(object):
     def deal_xml(self):
         for (k, v) in self.__node.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('delete attribute error:' + k)
+                raise AttributeError('delete attribute invalid:' + k)
             else:
                 setattr(self, k, v)
+
+        if not self.name:
+            raise ValueError('delete name invalid')
 
         for node in self.__node.childNodes:
             if node.nodeType != node.ELEMENT_NODE:

@@ -24,11 +24,10 @@ class DB(object):
         with open(self.file_path, 'r', encoding='utf-8') as fp:
             xml_str += fp.read()
 
+        # 替换特殊字符
         xml_str = xml_str.replace('"<"', '"lt"')
         xml_str = xml_str.replace('"<="', '"lteq"')
         xml_str = xml_str.replace('"<>"', '"ltgt"')
-
-        # 替换特殊字符
 
         root = minidom.parseString(xml_str).documentElement
 
@@ -36,7 +35,7 @@ class DB(object):
 
         # table
         for elem in root.getElementsByTagName('table'):
-            print('\ntable ======> ' + elem.getAttribute('name'))
+            print('table ======> ' + elem.getAttribute('name'))
 
             table = Table(elem, tables)
 
@@ -132,5 +131,5 @@ class DB(object):
     #     print("\n".join(['%s:%s' % item for item in obj.__dict__.items()]))
 
 
-db = DB('/Users/tracy//work/project/meiyu/dic/customer/db.xml')
+db = DB('/Users/tracy//work/project/meiyu/dic/test/db.xml')
 db.do()

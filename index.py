@@ -15,8 +15,11 @@ class Index(object):
     def deal_xml(self):
         for (k, v) in self.__node.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('index attribute error:' + k)
+                raise AttributeError('index attribute invalid:' + k)
             else:
                 setattr(self, k, v)
+
+        if self.__node.nodeName != 'primary' and not self.name:
+            raise ValueError('index name invalid')
 
         return self

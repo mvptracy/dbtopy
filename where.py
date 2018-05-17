@@ -20,11 +20,13 @@ class Where(object):
                         if k == 'comp':
                             v = self.replace_spec_string(v)
                         w[k] = v
+                    else:
+                        raise AttributeError('where attribute invalid:' + k)
                 for child_node in node.childNodes:
                     if child_node.nodeType == child_node.ELEMENT_NODE:
                         w['child'].append(self.deal_xml(child_node))
             else:
-                raise TypeError('where type error')
+                raise AttributeError('where type invalid')
         else:
             # 无嵌套
             for (k, v) in node.attributes.items():
@@ -32,6 +34,8 @@ class Where(object):
                     if k == 'comp':
                         v = self.replace_spec_string(v)
                     w[k] = v
+                else:
+                    raise AttributeError('where attribute invalid:' + k)
 
         return w
 

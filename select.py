@@ -26,6 +26,9 @@ class Select(object):
             else:
                 setattr(self, k, v)
 
+            if not self.name:
+                raise ValueError('select name invalid')
+
         for i, node in enumerate(self.__node.childNodes):
             if node.nodeType != node.ELEMENT_NODE:
                 continue

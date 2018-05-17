@@ -17,9 +17,12 @@ class Update(object):
     def deal_xml(self):
         for (k, v) in self.__node.attributes.items():
             if not hasattr(self, k):
-                raise TypeError('update attribute error:' + k)
+                raise AttributeError('update attribute invalid:' + k)
             else:
                 setattr(self, k, v)
+
+        if not self.name:
+            raise ValueError('update name invalid')
 
         for node in self.__node.childNodes:
             if node.nodeType != node.ELEMENT_NODE:
@@ -30,7 +33,7 @@ class Update(object):
                 if node.hasAttribute('name'):
                     field['name'] = node.getAttribute('name')
                 else:
-                    raise AttributeError('select.field')
+                    raise AttributeError('update.field.name invalid')
 
                 if node.hasAttribute('value'):
                     field['value'] = node.getAttribute('value')
