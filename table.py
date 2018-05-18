@@ -1,4 +1,5 @@
 class Table(object):
+    DEFAULT_FIELDS = ('verid', 'create_time', 'update_time', 'del')
 
     def __init__(self, node_table, tables):
         # property
@@ -9,6 +10,7 @@ class Table(object):
         self.db_type = None
         self.prefix = None
         self.split = 0
+        self.split_custom = ''
         self.readonly = 'false'
         self.logic_del = 'true'
         self.db = ''
@@ -17,7 +19,6 @@ class Table(object):
         self.split_time = ''
         self.primary_key = ''
         self.field_list = {}  # field_name:field_obj
-        self.field_name_list = ['verid', 'create_time', 'update_time', 'del']
         self.index_list = {}  # index_name:index_obj
         self.index_name_list = []
         self.update = []  # update_obj
@@ -49,11 +50,15 @@ class Table(object):
             self.prefix = self.__tables.prefix
 
     def add_field(self, field, default=False):
-        if field.name not in self.field_name_list or default:
-            self.field_list[field.name] = field
-            self.field_name_list.append(field.name)
-            if field.primary == 'true':
-                self.primary_key = field.name
+        if field.name in self.DEFAULT_FIELDS and default == False:
+            raise ValueError('field repeat:' + field.name)
+
+        if field.name in self.field_list:
+            raise ValueError('field repeat:' + field.name)
+
+        self.field_list[field.name] = field
+        if field.primary == 'true':
+            self.primary_key = field.name
 
     def add_index(self, index):
         if index.name not in self.index_name_list:

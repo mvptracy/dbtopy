@@ -96,9 +96,6 @@ class DB(object):
 
                 tables.add_table(table)
 
-                # 验证字段
-                table.field_name_list = list(set(table.field_name_list))
-
             elif table.db_type == 'redis':
                 pass
             elif table.db_type == 'file':
@@ -110,7 +107,6 @@ class DB(object):
         n = 1
         for (tb_name, table) in self.tables.table.items():
             # 写sql文件
-
             make = Make(n, self.tables)
             make.make_add_sql(table)
             make.make_drop_sql(table)
