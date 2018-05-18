@@ -7,6 +7,7 @@ class Tables(object):
         self.db_type = ''
         self.prefix = ''
         self.table = {}  # table_name:table_obj
+        self.xml = None
 
         # args
         self.__node_tables = node_tables

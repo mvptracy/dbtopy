@@ -7,6 +7,7 @@ from dbtopy.make import Make
 from dbtopy.update import Update
 from dbtopy.delete import Delete
 from dbtopy.select import Select
+from lxml import etree
 
 
 class DB(object):
@@ -30,14 +31,19 @@ class DB(object):
         xml_str = xml_str.replace('"<>"', '"ltgt"')
 
         root = minidom.parseString(xml_str).documentElement
-
         tables = Tables(root)
+        tables.xml = etree.parse(self.file_path)
 
         # table
+        table_name_list = []
         for elem in root.getElementsByTagName('table'):
             print('table ======> ' + elem.getAttribute('name'))
 
             table = Table(elem, tables)
+            if table.name in table_name_list:
+                raise ValueError('table name repeat:' + table.name)
+            else:
+                table_name_list.append(table.name)
 
             if table.db_type == 'mysql':
 
@@ -87,9 +93,11 @@ class DB(object):
                 d.name = 'del'
                 d.type = 'tinyint'
                 table.add_field(d, True)
+
                 tables.add_table(table)
 
-                # 清空数据
+                # 验证字段
+                table.field_name_list = list(set(table.field_name_list))
 
             elif table.db_type == 'redis':
                 pass
@@ -102,6 +110,7 @@ class DB(object):
         n = 1
         for (tb_name, table) in self.tables.table.items():
             # 写sql文件
+
             make = Make(n, self.tables)
             make.make_add_sql(table)
             make.make_drop_sql(table)
@@ -112,24 +121,7 @@ class DB(object):
             make.make_php_file(table)
             n += 1
 
-    # def check_required(self, value, type, name):
-    #     value = value.strip()
-    #     if isinstance(value, type) and value:
-    #         return value
-    #     else:
-    #         raise ValueError(name + ' error')
-    #
-    # def check_use_default(self, name, value):
-    #
-    #     value = value.strip()
-    #     if not value:
-    #         return self.__getattribute__(name)
-    #     else:
-    #         return value
 
-    # def pr_obj(self, obj):
-    #     print("\n".join(['%s:%s' % item for item in obj.__dict__.items()]))
-
-
-db = DB('/Users/tracy//work/project/meiyu/dic/test/db.xml')
-db.do()
+if __name__ == '__main__':
+    db = DB('/Users/tracy//work/project/meiyu/dic/test/db.xml')
+    db.do()

@@ -11,6 +11,7 @@ class Make(object):
             self.write_mode = 'a'
         self.tables = tables
 
+
     def make_add_sql(self, table):
         sql = ''
         # field
@@ -687,6 +688,7 @@ class Make(object):
 
             # 更新的字段
             for (f_name, f) in upd_obj.field_list.items():
+                self.field_exist(f_name, table.name)
                 self.tree_func_doc_comment += '\t * @param $%s\n' % f_name
                 bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
                 upd_str += '\t' * 2 + '$sql .= \', %s = :%s\';\n' % (self.add_field_symbol(f_name), f_name)
@@ -923,6 +925,7 @@ class Make(object):
             func_name = 'getBy'
 
             for f_name in index['value'].replace(' ','') .split(','):
+                self.field_exist(f_name, table.name)
                 func_name += f_name.capitalize()
                 func_doc_comment += '\t' + ' * @param  $%s  %s\n' % (f_name, table.field_list[f_name].desc)
                 bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
@@ -999,6 +1002,9 @@ class Make(object):
                 if f_name == '*':
                     break
 
+                if f.get('origin', 'false') == 'false':
+                    self.field_exist(f_name, f.get('table', table.name))
+
                 if f_name in self.tables.table[f.get('table', table.name)].field_list:
                     f_obj = self.tables.table[f.get('table', table.name)].field_list[f_name]
                     if f_obj.type == 'datetime' and f_name not in ('create_time', 'update_time') and f.get('origin', 'false') == 'false':
@@ -1018,6 +1024,7 @@ class Make(object):
 
                 if f.get('alias'):
                     f_name += ' AS %s' % f['alias']
+
                 fields_str += f_name + ', '
 
             # 无field查*
@@ -1185,12 +1192,12 @@ class Make(object):
 
         variable_name_list = []
         for row in where_list['child']:
-
             if 'child' not in row:
                 field_table_prefix = row.get('table_prefix', table.prefix)
                 field_table_name = row.get('table', table.name)
                 # 处理参数名
                 f_name = row['name']
+                self.field_exist(f_name, field_table_name)
                 if 'suffix' in row:
                     variable_name = field_table_name + '_' + f_name + '_' + row['suffix'] + where_suffix
                 else:
@@ -1335,6 +1342,7 @@ class Make(object):
         return final_str
 
     def deal_join(self, join):
+        self.table_exist(join['table'], join.get('table_prefix', self.table_prefix))
         join_str = '\t' * 2 + '$sql .= \' %s JOIN `%s` on \';\n' % (join['type'].upper(), join.get('table_prefix', self.table_prefix) + join['table'])
         join_str += self.deal_join_cond(join)
         return join_str
@@ -1353,6 +1361,9 @@ class Make(object):
                 cond_str += '\t' * 2 + '$sql .= \')\';\n';
                 i += 1
             else:
+                self.field_exist(c['field1'], c['table1'])
+                self.field_exist(c['field2'], c['table2'])
+
                 if i > 0:
                     cond_str += '\t' * 2 + '$sql .= \' %s \';\n' % type.upper()
                 cond_str += '\t' * 2 + '$sql .= \'(`%s`.`%s` = `%s`.`%s`)\';\n' % (
@@ -1361,3 +1372,22 @@ class Make(object):
                 i += 1
 
         return cond_str
+
+    def field_exist(self, field_name, table_name):
+        if field_name in ('verid', 'create_time', 'update_time', 'del'):
+            return
+        r = self.tables.xml.xpath('//tables/table[@name="%s"]/field[@name="%s"]' % (table_name, field_name))
+        if len(r) == 0:
+            raise ValueError('table:%s, field: %s' % (table_name, field_name))
+
+    def table_exist(self, table_name, table_prefix):
+        r1 = self.tables.xml.xpath('//tables/table[@name="%s"][@prefix="%s"]' % (table_name, table_prefix))
+        if len(r1) > 0:
+            return
+
+        r2 = self.tables.xml.xpath('//tables[@prefix="%s"]/table[@name="%s"]' % (table_prefix, table_name))
+        if len(r2) > 0:
+            return
+
+        raise ValueError('table_prefix: %s, table:%s' % (table_prefix, table_name))
+
