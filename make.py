@@ -287,8 +287,11 @@ class Make(object):
         custom_del_str = self.get_custom_del_str(table)
         custom_upd_str = self.get_custom_upd_str(table)
         get_str = self.get_default_get_str(table)
-        getall_str = self.get_default_getall_str(table)
-        gettop_str = self.get_default_gettop_str(table)
+        if table.merge == 'true':
+            getall_str = self.get_default_getall_str(table)
+            gettop_str = self.get_default_gettop_str(table)
+        else:
+            getall_str, gettop_str = '', ''
         get_by_index_str = self.get_by_index_str(table)
         custom_select_str = self.get_custom_select_str(table)
 
@@ -308,7 +311,7 @@ class Make(object):
         insert_field_str = ''
         insert_value_str = ''
         for i, (field_name, field) in enumerate(table.field_list.items()):
-            if field.auto == 'true':
+            if field.auto == 'true' or field_name in table.DEFAULT_FIELDS:
                 continue
             if field.param or field.null == 'true':
                 # 默认参数
@@ -403,6 +406,8 @@ class Make(object):
         where_str += '\';\n'
 
         for i, f in enumerate(param_value_fields):
+            if f.name in table.DEFAULT_FIELDS:
+                continue
             func_doc_comment += '\t * @param  $%s\n' % f.name
             bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f.name, self.get_bind_value(f))
             param_str += '\t' * 3 + ', $%s\n' % f.name
@@ -469,7 +474,6 @@ class Make(object):
             split_key = True
             param_str += '\t' * 2 + ', $splitKey\n'
 
-
         final_str = func_doc_comment
         final_str += '\tpublic static function del(\n'
         final_str += param_str
@@ -487,7 +491,7 @@ class Make(object):
         final_str += '\t' * 2 + '$datetime = new \DateTime;\n'
         final_str += '\t' * 2 + '$curDateTime = $datetime->format(\'Y-m-d H:i:s\');\n'
         if table.split:
-            final_str += self.get_split_str(table, True)
+            final_str += self.get_split_str(table, split_key)
             final_str += '\t' * 2 + '$sql = \'update `%s_\' . $dbIndex . \'` set update_time=\\\'\' . $curDateTime . \'\\\', del=1 where \';\n' % self.table_name
         else:
             final_str += '\t' * 2 + '$sql = \'update `%s` set update_time=\\\'\' . $curDateTime . \'\\\', del=1 where \';\n' % self.table_name
@@ -542,7 +546,7 @@ class Make(object):
         final_str += '\t' * 2 + '$datetime = new \DateTime;\n'
         final_str += '\t' * 2 + '$curDateTime = $datetime->format(\'Y-m-d H:i:s\');\n'
         if table.split:
-            final_str += self.get_split_str(table, True)
+            final_str += self.get_split_str(table, split_key)
             final_str += '\t' * 2 + '$sql = \'delete from `%s_\' . $dbIndex . \'` where \';\n' % self.table_name
         else:
             final_str += '\t' * 2 + '$sql = \'delete from `%s` where \';\n' % self.table_name
@@ -736,6 +740,14 @@ class Make(object):
             func_doc_comment = self.tree_func_doc_comment
             param_str = self.tree_param_str
             where_str += tree[0]
+            split_key = tree[2]
+
+            if not split_key:
+                if param_str:
+                    param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
+                else:
+                    param_str = '\t' * 2 + '$splitKey\n'
+                split_key = True
 
             if upd_obj.lock == 'true':
                 where_str += '\t' * 2 + '$bind[\':verid\'] = $oldVerId;\n'
@@ -761,7 +773,12 @@ class Make(object):
             final_str += '\t' * 2 + '];\n'
             final_str += '\t' * 2 + '$datetime = new \DateTime;\n'
             final_str += '\t' * 2 + '$curDateTime = $datetime->format(\'Y-m-d H:i:s\');\n'
-            final_str += '\t' * 2 + '$sql = \'UPDATE %s SET \';\n' % self.add_field_symbol(self.table_name)
+            if table.split:
+                final_str += self.get_split_str(table, split_key)
+                final_str += '\t' * 2 + '$sql = \'UPDATE `%s_\' . $dbIndex . \'` SET \';\n' % self.table_name
+            else:
+                final_str += '\t' * 2 + '$sql = \'UPDATE `%s` SET \';\n' % self.table_name
+
             final_str += '\t' * 2 + '$sql .= \'update_time = \\\'\' . $curDateTime . \'\\\'\';\n'
             final_str += '\t' * 2 + '$sql .= \', verid = verid + 1\';\n'
             final_str += upd_str
@@ -792,6 +809,14 @@ class Make(object):
             func_doc_comment = self.tree_func_doc_comment
             param_str = self.tree_param_str
             where_str = tree[0]
+            split_key = tree[2]
+
+            if not split_key:
+                if param_str:
+                    param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
+                else:
+                    param_str = '\t' * 2 + '$splitKey\n'
+                split_key = True
 
             final_str += '\t/**\n'
             final_str += '\t * %s\n' % del_obj.desc
@@ -811,9 +836,17 @@ class Make(object):
             final_str += '\t' * 2 + '$curDateTime = $datetime->format(\'Y-m-d H:i:s\');\n'
 
             if del_obj.real == 'false':
-                final_str += '\t' * 2 + '$sql = \'UPDATE `%s` SET update_time = \\\'\' . $curDateTime . \'\\\', del=1\';\n' % self.table_name
+                if table.split:
+                    final_str += self.get_split_str(table, split_key)
+                    final_str += '\t' * 2 + '$sql = \'UPDATE `%s_\' . $dbIndex . \'` SET update_time = \\\'\' . $curDateTime . \'\\\', del=1\';\n' % self.table_name
+                else:
+                    final_str += '\t' * 2 + '$sql = \'UPDATE `%s` SET update_time = \\\'\' . $curDateTime . \'\\\', del=1\';\n' % self.table_name
             else:
-                final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s`\';\n' % self.table_name
+                if table.split:
+                    final_str += self.get_split_str(table, split_key)
+                    final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s_\' . $dbIndex . \'`\';\n' % self.table_name
+                else:
+                    final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s`\';\n' % self.table_name
             final_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
             final_str += where_str
             final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
@@ -831,7 +864,7 @@ class Make(object):
 
         func_doc_comment += '\t' + '/**\n'
         func_doc_comment += '\t' + ' * get a record.\n'
-        for f_name in table.primary_key.replace(' ', '').split(','):
+        for f_name in table.primary_key.split(','):
             field_obj = table.field_list[f_name]
             func_doc_comment += '\t' + ' * @param  $%s  %s\n' % (f_name, field_obj.desc)
             if param_str == '':
@@ -871,7 +904,7 @@ class Make(object):
         final_str += bind_str
         final_str += '\t' * 2 + '];\n'
         if table.split:
-            final_str += self.get_split_str(table, True)
+            final_str += self.get_split_str(table, split_key)
             final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s_\' . $dbIndex . \'` WHERE \'' % self.table_name
         else:
             final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s` WHERE \'' % self.table_name
@@ -963,6 +996,7 @@ class Make(object):
             bind_str = ''
             where_str = ''
             func_name = 'getBy'
+            param_field_arr = []
 
             for f_name in index['value'].replace(' ', '').split(','):
                 self.field_exist(f_name, table.name)
@@ -972,15 +1006,17 @@ class Make(object):
 
                 if param_str == '':
                     param_str += '\t' * 2 + '$%s\n' % f_name
+                    param_field_arr.append(f_name)
                 else:
                     param_str += '\t' * 2 + ', $%s\n' % f_name
+                    param_field_arr.append(f_name)
 
                 if where_str == '':
                     where_str += ' . \'`%s` = :%s\'' % (f_name, f_name)
                 else:
                     where_str += ' . \' AND `%s` = :%s\'' % (f_name, f_name)
 
-            if table.split_custom == table.primary_key:
+            if table.split_custom in param_field_arr:
                 split_key = False
             else:
                 split_key = True
@@ -1004,7 +1040,7 @@ class Make(object):
             final_str += bind_str
             final_str += '\t' * 2 + '];\n'
             if table.split:
-                final_str += self.get_split_str(table, True)
+                final_str += self.get_split_str(table, split_key)
                 final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s_\' . $dbIndex . \'` WHERE \'' % self.table_name
             else:
                 final_str += '\t' * 2 + '$sql = \'SELECT * FROM `%s` WHERE \'' % self.table_name
@@ -1028,7 +1064,11 @@ class Make(object):
 
     def get_custom_select_str(self, table):
         final_str = ''
+        final_str_for_index = ''
+        self.table = table
         self.table_prefix = table.prefix
+        if table.split:
+            self.table_name += '_\' . $dbIndex . \''
 
         for sel_obj in table.select:
             func_doc_comment = ''
@@ -1117,6 +1157,14 @@ class Make(object):
             func_doc_comment = self.tree_func_doc_comment
             param_str = self.tree_param_str
             where_str += tree[0]
+            split_key = tree[2]
+
+            if not split_key:
+                if param_str:
+                    param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
+                else:
+                    param_str = '\t' * 2 + '$splitKey\n'
+                split_key = True
 
             final_str += '\t/**\n'
             final_str += '\t * %s\n' % sel_obj.desc
@@ -1133,6 +1181,8 @@ class Make(object):
                 self.deal_namespace(table.namespace), self.class_name, sel_obj.name)
             final_str += '\t' * 2 + '}\n'
             final_str += '\t' * 2 + '$bind = [];\n'
+            if table.split:
+                final_str += self.get_split_str(table, split_key)
             final_str += '\t' * 2 + '$sql = \'SELECT %s FROM `%s`\';\n' % (fields_str, self.table_name)
             final_str += join_str
             final_str += where_str
@@ -1146,6 +1196,40 @@ class Make(object):
             final_str += self.deal_result_to_timestamp_fields(datetime_fields, sel_obj.single)
             final_str += '\t' * 2 + 'return $rs;\n'
             final_str += '\t' + '}\n\n'
+
+            if table.split:
+                final_str += '\n\t/**\n'
+                final_str += '\t * %s\n' % sel_obj.desc
+                final_str += func_doc_comment
+                final_str += '\t */\n'
+                final_str += '\tpublic static function %s(\n' % (sel_obj.name + 'ForIndex')
+                if self.tree_param_str:
+                    param_str = '\t' * 2 + '$dbIndex\n\t\t, ' + self.tree_param_str[2:]
+                else:
+                    param_str = '\t' * 2 + '$dbIndex\n'
+                final_str += param_str
+                final_str += '\t)\n'
+                final_str += '\t{\n'
+                final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::%s\']))\n' % (
+                    self.deal_namespace(table.namespace), self.class_name, sel_obj.name)
+                final_str += '\t' * 2 + '{\n'
+                final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::%s\'];\n' % (
+                    self.deal_namespace(table.namespace), self.class_name, sel_obj.name)
+                final_str += '\t' * 2 + '}\n'
+                final_str += '\t' * 2 + '$bind = [];\n'
+                final_str += '\t' * 2 + '$sql = \'SELECT %s FROM `%s`\';\n' % (fields_str, self.table_name)
+                final_str += join_str
+                final_str += where_str
+                final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
+                if sel_obj.single == 'true':
+                    final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
+                else:
+                    final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql, $bind );\n'
+                if final_str == '*':
+                    final_str += deal_result_to_timestamp(table, )
+                final_str += self.deal_result_to_timestamp_fields(datetime_fields, sel_obj.single)
+                final_str += '\t' * 2 + 'return $rs;\n'
+                final_str += '\t' + '}\n\n'
 
         return final_str
 
@@ -1201,17 +1285,20 @@ class Make(object):
         else:
             return s
 
-    def get_field_table(self, w, table_name):
+    def get_field_table(self, where_row, table):
         field_table = ''
-        if 'table_prefix' in w:
-            field_table += w['table_prefix']
+        if 'table_prefix' in where_row:
+            field_table += where_row['table_prefix']
         else:
-            field_table += self.table_prefix
+            field_table += table.prefix
 
-        if 'table' in w:
-            field_table += w['table']
+        if 'table' in where_row:
+            field_table += where_row['table']
         else:
-            field_table += table_name
+            field_table += table.name
+
+        if table.split and field_table == table.prefix + table.name:
+            field_table += '_\' . $dbIndex . \''
 
         if not field_table:
             field_table = self.table_name
@@ -1223,6 +1310,7 @@ class Make(object):
         where_str = ''
         where_suffix = ''
         where_name = ''
+        split_key = ''
         if 'type' in where_list:
             type = where_list['type'].upper()
             if 'name' in where_list:
@@ -1278,6 +1366,9 @@ class Make(object):
                             self.get_bind_value(self.tables.table[field_table_name].field_list[f_name], variable_name,
                                                 row['value']))
                 else:
+                    if table.split and (table.split_custom == row['name'] or (
+                            table.split_custom == '' and table.primary_key == row['name'])):
+                        split_key = variable_name
                     self.tree_func_doc_comment += '\t * @param (%s) $%s\n' % (comp, variable_name)
                     if self.tree_param_str:
                         self.tree_param_str += '\t' * 2 + ', $%s\n' % variable_name
@@ -1299,10 +1390,10 @@ class Make(object):
 
                 if comp in ('IN', 'NOT IN'):
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
-                        variable_name, self.get_field_table(row, table.name), f_name, comp, variable_name)
+                        variable_name, self.get_field_table(row, table), f_name, comp, variable_name)
                 else:
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s :%s)\';\n' % (
-                        variable_name, self.get_field_table(row, table.name), f_name, comp, variable_name)
+                        variable_name, self.get_field_table(row, table), f_name, comp, variable_name)
                 where_str += '\t' * 2 + '}\n'
 
                 variable_name_list.append(variable_name)
@@ -1311,6 +1402,7 @@ class Make(object):
                 tree = self.deal_where_tree(row, table, where_suffix)
                 where_str += tree[0]
                 variable_name_list.append(tree[1])
+                split_key = tree[2]
 
         # type拼接
         where_str += '\n\t\t// table:' + tb_name + ', name:' + where_name + ' type:' + type + '\n'
@@ -1341,7 +1433,7 @@ class Make(object):
             where_str += '\t' * 3 + '$%s = \'(\' . $%s . \')\';\n' % (sql_name, sql_name)
             where_str += '\t' * 2 + '}\n'
 
-        return [where_str, sql_name[4:]]
+        return [where_str, sql_name[4:], split_key]
 
     def deal_result_to_timestamp(self, table, unique):
         final_str = ''
@@ -1419,9 +1511,15 @@ class Make(object):
 
                 if i > 0:
                     cond_str += '\t' * 2 + '$sql .= \' %s \';\n' % type.upper()
+                table1 = c.get('table_prefix1', self.table_prefix) + c['table1']
+                if self.table.split and table1 == self.table.prefix + self.table.name:
+                    table1 = self.table_name
+                table2 = c.get('table_prefix2', self.table_prefix) + c['table2']
+                if self.table.split and table2 == self.table.prefix + self.table.name:
+                    table2 = self.table_name
                 cond_str += '\t' * 2 + '$sql .= \'(`%s`.`%s` = `%s`.`%s`)\';\n' % (
-                    c.get('table_prefix1', self.table_prefix) + c['table1'], c['field1'],
-                    c.get('table_prefix2', self.table_prefix) + c['table2'], c['field2'])
+                    table1, c['field1'],
+                    table2 + c['table2'], c['field2'])
                 i += 1
 
         return cond_str
@@ -1449,25 +1547,28 @@ class Make(object):
         final_str = ''
 
         if split_key:
-            final_str += '\t' * 2 + '$tmpKey = $splitKey;\n'
+            if split_key == True:
+                final_str += '\t' * 2 + '$tmpKey = $splitKey;\n'
+            else:
+                final_str += '\t' * 2 + '$tmpKey = $%s;\n' % split_key
             final_str += '\t' * 2 + '$hash = \\Sooh\\Base\\Utils::hash( $tmpKey );\n'
             final_str += '\t' * 2 + '$dbIndex = $hash%%%s;\n' % table.split
             return final_str
 
         split_field = []
         if table.split_custom:
-            for f_name in table.split_custom.replace(' ', '').split(','):
-                self.field_exist(f_name, table.name)
-                split_field.append('$' + f_name)
+            self.field_exist(table.split_custom, table.name)
+            split_field.append('$' + table.split_custom)
 
             final_str += '\t' * 2 + '$tmpKey = %s;\n' % (' . \'_\' . '.join(split_field))
             final_str += '\t' * 2 + '$hash = \\Sooh\\Base\\Utils::hash( $tmpKey );\n'
             final_str += '\t' * 2 + '$dbIndex = $hash%%%s;\n' % table.split
         else:
             if ',' not in table.primary_key and self.tables.xml.xpath(
-                    '//tables/table[@name="' + table.name + '"]/field[@name="' + table.primary_key + '"]/@auto')[0] == 'true':
+                    '//tables/table[@name="' + table.name + '"]/field[@name="' + table.primary_key + '"]/@auto')[
+                0] == 'true':
                 raise ValueError('auto increment primary key must need split_custom')
-            for f_name in table.primary_key.replace(' ', '').split(','):
+            for f_name in table.primary_key.split(','):
                 self.field_exist(f_name, table.name)
                 split_field.append('$' + f_name)
 

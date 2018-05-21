@@ -24,6 +24,7 @@ class Table(object):
         self.update = []  # update_obj
         self.delete = []  # delete_obj
         self.select = []  # select_obj
+        self.merge = 'true'  # =false 没有gettop和getall
 
         # args
         self.__node_table = node_table
