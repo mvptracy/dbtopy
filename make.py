@@ -323,7 +323,7 @@ class Make(object):
                 # 无默认
                 no_param_fields.append(field)
 
-            if i == 0:
+            if insert_field_str == '':
                 insert_field_str += '\t' * 2 + '$sql .= \'`%s`\';\n' % field.name
                 insert_value_str += '\t' * 2 + '$sql .= \':%s\';\n' % field.name
             else:
@@ -471,11 +471,12 @@ class Make(object):
         where_str += '\';\n'
         func_doc_comment += '\t */\n'
 
-        if table.split_custom == table.primary_key:
-            split_key = False
-        else:
-            split_key = True
-            param_str += '\t' * 2 + ', $splitKey\n'
+        if table.split:
+            if table.split_custom == table.primary_key:
+                split_key = False
+            else:
+                split_key = True
+                param_str += '\t' * 2 + ', $splitKey\n'
 
         final_str = func_doc_comment
         final_str += '\tpublic static function del(\n'
@@ -526,11 +527,12 @@ class Make(object):
         where_str += '\';\n'
         func_doc_comment += '\t */\n'
 
-        if table.split_custom == table.primary_key:
-            split_key = False
-        else:
-            split_key = True
-            param_str += '\t' * 2 + ', $splitKey\n'
+        if table.split:
+            if table.split_custom == table.primary_key:
+                split_key = False
+            else:
+                split_key = True
+                param_str += '\t' * 2 + ', $splitKey\n'
 
         final_str = func_doc_comment
         final_str += '\tpublic static function delReal(\n'
@@ -925,7 +927,7 @@ class Make(object):
         final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
         final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
         final_str += '\t' * 2 + 'if (!$rs || 0 == count($rs))\n\t\t{\n\t\t\treturn false;\n\t\t}\n'
-        final_str += self.deal_result_to_timestamp(table, 'true')
+        final_str += self.deal_spec_field_result(table.field_list, 'true')
         final_str += '\t' * 2 + 'return $rs;\n'
         final_str += '\t}\n\n'
 
@@ -951,7 +953,7 @@ class Make(object):
         final_str += '\';\n'
         final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
         final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql );\n'
-        final_str += self.deal_result_to_timestamp(table, 'false')
+        final_str += self.deal_spec_field_result(table.field_list, 'false')
         final_str += '\t' * 2 + 'return $rs;\n'
         final_str += '\t' + '}\n'
 
@@ -977,7 +979,7 @@ class Make(object):
         final_str += ' LIMIT 0, \' . $num;\n'
         final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
         final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql );\n'
-        final_str += self.deal_result_to_timestamp(table, 'false')
+        final_str += self.deal_spec_field_result(table.field_list, 'false')
         final_str += '\t' * 2 + 'return $rs;\n'
         final_str += '\t' + '}\n'
 
@@ -1068,7 +1070,7 @@ class Make(object):
             else:
                 final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql, $bind );\n'
             final_str += '\t' * 2 + 'if (!$rs || 0 == count($rs))\n\t\t{\n\t\t\treturn false;\n\t\t}\n'
-            final_str += self.deal_result_to_timestamp(table, index['unique'])
+            final_str += self.deal_spec_field_result(table.field_list, index['unique'])
             final_str += '\t' * 2 + 'return $rs;\n'
             final_str += '\t' + '}\n\n'
 
@@ -1097,7 +1099,7 @@ class Make(object):
             else:
                 has_join = False
 
-            datetime_fields = []
+            spec_fields = table.field_list
             # 查询的字段
             for f in sel_obj.field_list:
                 f_name = f['name']
@@ -1108,14 +1110,11 @@ class Make(object):
                 if f.get('origin', 'false') == 'false':
                     self.field_exist(f_name, f.get('table', table.name))
 
-                if f_name in self.tables.table[f.get('table', table.name)].field_list:
-                    f_obj = self.tables.table[f.get('table', table.name)].field_list[f_name]
-                    if f_obj.type == 'datetime' and f_name not in ('create_time', 'update_time') and f.get('origin',
-                                                                                                           'false') == 'false':
-                        datetime_fields.append(f_name)
+                f_obj = self.get_fieldobj(f.get('table', table.name), f_name)
 
                 if f.get('origin', 'false') == 'false':
                     f_name = self.add_field_symbol(f_name)
+                    spec_fields[f_name] = f_obj
 
                 if has_join:
                     f_name = '`%s`.' % (f.get('table_prefix', table.prefix) + f.get('table', table.name)) + f_name
@@ -1134,9 +1133,6 @@ class Make(object):
             # 无field查*
             if fields_str == '':
                 fields_str = '*'
-                for (k, f) in table.field_list.items():
-                    if f.type == 'datetime':
-                        datetime_fields.append(f.name)
             else:
                 fields_str = fields_str[:-2]
 
@@ -1146,9 +1142,7 @@ class Make(object):
                 join_str += self.deal_join(j.join)
                 join_tables.append(j.join.get('table_prefix', self.table_prefix) + j.join['table'])
                 if fields_str == '*':
-                    for (k, f) in self.tables.table[j.join['table']].field_list.items():
-                        if f.type == 'datetime':
-                            datetime_fields.append(f.name)
+                    spec_fields.update(self.tables.table[j.join['table']].field_list)
 
             # where
             if sel_obj.logic_del == 'true' and len(join_tables) == 0:
@@ -1205,9 +1199,7 @@ class Make(object):
                 final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
             else:
                 final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql, $bind );\n'
-            if final_str == '*':
-                final_str += deal_result_to_timestamp(table, )
-            final_str += self.deal_result_to_timestamp_fields(datetime_fields, sel_obj.single)
+            final_str += self.deal_spec_field_result(spec_fields, sel_obj.single)
             final_str += '\t' * 2 + 'return $rs;\n'
             final_str += '\t' + '}\n\n'
 
@@ -1239,9 +1231,7 @@ class Make(object):
                     final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
                 else:
                     final_str += '\t' * 2 + '$rs = $db->fetchAll( $sql, $bind );\n'
-                if final_str == '*':
-                    final_str += deal_result_to_timestamp(table, )
-                final_str += self.deal_result_to_timestamp_fields(datetime_fields, sel_obj.single)
+                final_str += self.deal_spec_field_result(spec_fields, sel_obj.single)
                 final_str += '\t' * 2 + 'return $rs;\n'
                 final_str += '\t' + '}\n\n'
 
@@ -1282,6 +1272,10 @@ class Make(object):
 
         if field.type == 'datetime':
             return '%s::timestamp2dbTime($%s)' % (self.MYSQL_NAMESPACE, f_name)
+        elif field.array == 'true':
+            return '\'__begin_flag__,\' . implode(\',\', is_array($%s) ? $%s : [$%s]) . \',__end_flag__\'' % (f_name, f_name, f_name)
+        elif field.map == 'true':
+            return 'json_encode($%s)' % f_name
         else:
             return '$' + f_name
 
@@ -1450,56 +1444,6 @@ class Make(object):
 
         return [where_str, sql_name[4:], split_key]
 
-    def deal_result_to_timestamp(self, table, unique):
-        final_str = ''
-        if unique == 'true':
-            for (f_name, field_obj) in table.field_list.items():
-                if field_obj.type == 'datetime':
-                    final_str += '\t' * 2 + '$rs[\'%s\'] = %s::dbTime2Timestamp($rs[\'%s\']);\n' % (
-                        field_obj.name, self.MYSQL_NAMESPACE, field_obj.name)
-
-            # final_str += '\t' * 2 + '$rs[\'create_time\'] = %s::dbTime2Timestamp($rs[\'create_time\']);\n' % self.MYSQL_NAMESPACE
-            # final_str += '\t' * 2 + '$rs[\'update_time\'] = %s::dbTime2Timestamp($rs[\'update_time\']);\n' % self.MYSQL_NAMESPACE
-        else:
-            final_str += '\t' * 2 + 'if ($rs)\n'
-            final_str += '\t' * 2 + '{\n'
-            final_str += '\t' * 3 + 'foreach($rs as $k => $v)\n'
-            final_str += '\t' * 3 + '{\n'
-
-            for (f_name, field_obj) in table.field_list.items():
-                if field_obj.type == 'datetime':
-                    final_str += '\t' * 4 + '$v[\'%s\'] = %s::dbTime2Timestamp($v[\'%s\']);\n' % (
-                        field_obj.name, self.MYSQL_NAMESPACE, field_obj.name)
-
-            # final_str += '\t' * 4 + '$v[\'create_time\'] = %s::dbTime2Timestamp($v[\'create_time\']);\n' % self.MYSQL_NAMESPACE
-            # final_str += '\t' * 4 + '$v[\'update_time\'] = %s::dbTime2Timestamp($v[\'update_time\']);\n' % self.MYSQL_NAMESPACE
-            final_str += '\t' * 4 + '$rs[$k] = $v;\n'
-            final_str += '\t' * 3 + '}\n'
-            final_str += '\t' * 2 + '}\n'
-
-        return final_str
-
-    def deal_result_to_timestamp_fields(self, fields, unique):
-        fields = list(set(fields))
-        final_str = ''
-        if unique == 'true':
-            for f in fields:
-                final_str += '\t' * 2 + '$rs[\'%s\'] = %s::dbTime2Timestamp($rs[\'%s\']);\n' % (
-                    f, self.MYSQL_NAMESPACE, f)
-        else:
-            final_str += '\t' * 2 + 'if ($rs)\n'
-            final_str += '\t' * 2 + '{\n'
-            final_str += '\t' * 3 + 'foreach($rs as $k => $v)\n'
-            final_str += '\t' * 3 + '{\n'
-            for f in fields:
-                final_str += '\t' * 4 + '$v[\'%s\'] = %s::dbTime2Timestamp($v[\'%s\']);\n' % (
-                    f, self.MYSQL_NAMESPACE, f)
-            final_str += '\t' * 4 + '$rs[$k] = $v;\n'
-            final_str += '\t' * 3 + '}\n'
-            final_str += '\t' * 2 + '}\n'
-
-        return final_str
-
     def deal_join(self, join):
         self.table_exist(join['table'], join.get('table_prefix', self.table_prefix))
         join_str = '\t' * 2 + '$sql .= \' %s JOIN `%s` on \';\n' % (
@@ -1592,3 +1536,42 @@ class Make(object):
             final_str += '\t' * 2 + '$dbIndex = $hash%%%s;\n' % table.split
 
         return final_str
+
+    def deal_spec_field_result(self, field_list, unique='false'):
+        final_str = ''
+        for f_name, f_obj in field_list.items():
+            if unique == 'true':
+                if f_obj.type == 'datetime':
+                    final_str += '\t' * 2 + '$rs[\'%s\'] = %s::dbTime2Timestamp($rs[\'%s\']);\n' % (
+                    f_name, self.MYSQL_NAMESPACE, f_name)
+                if f_obj.array == 'true':
+                    final_str += '\t' * 2 + '$rs[\'%s\'] = explode( \',\', $rs[\'%s\'] );\n' % (f_name, f_name)
+                    final_str += '\t' * 2 + 'array_pop( $rs[\'%s\'] );\n' % f_name
+                    final_str += '\t' * 2 + 'array_shift( $rs[\'%s\'] );\n' % f_name
+                if f_obj.map == 'true':
+                    final_str += '\t' * 2 + '$rs[\'%s\'] = json_decode( $rs[\'%s\'], true );\n' % (f_name, f_name)
+            else:
+                if f_obj.type == 'datetime':
+                    final_str += '\t' * 4 + '$v[\'%s\'] = %s::dbTime2Timestamp($v[\'%s\']);\n' % (
+                    f_name, self.MYSQL_NAMESPACE, f_name)
+                if f_obj.array == 'true':
+                    final_str += '\t' * 4 + '$v[\'%s\'] = explode( \',\', $v[\'%s\'] );\n' % (f_name, f_name)
+                    final_str += '\t' * 4 + 'array_pop( $v[\'%s\'] );\n' % f_name
+                    final_str += '\t' * 4 + 'array_shift( $v[\'%s\'] );\n' % f_name
+                if f_obj.map == 'true':
+                    final_str += '\t' * 4 + '$v[\'%s\'] = json_decode( $v[\'%s\'], true );\n' % (f_name, f_name)
+
+        if final_str and unique == 'false':
+            tmp = final_str
+            final_str = '\t' * 2 + 'if ($rs)\n'
+            final_str += '\t' * 2 + '{\n'
+            final_str += '\t' * 3 + 'foreach($rs as $k => $v)\n'
+            final_str += '\t' * 3 + '{\n'
+            final_str += tmp
+            final_str += '\t' * 4 + '$rs[$k] = $v;\n'
+            final_str += '\t' * 3 + '}\n'
+            final_str += '\t' * 2 + '}\n'
+        return final_str
+
+    def get_fieldobj(self, table_name, field_name):
+        return self.tables.table[table_name].field_list[field_name]
