@@ -9,6 +9,7 @@ class Update(object):
         self.lock = 'false'
         self.field_list = {}  # {'id':{'name':'id';'value':'111'}}
         self.where_list = []  # {where_obj, where_obj}
+        self.suffix = ''
 
         self.__node = node
 

@@ -745,7 +745,7 @@ class Make(object):
             where_str += tree[0]
             split_key = tree[2]
 
-            if not split_key:
+            if table.split and not split_key:
                 if param_str:
                     param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
                 else:
@@ -787,6 +787,8 @@ class Make(object):
             final_str += upd_str
             final_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
             final_str += where_str
+            if upd_obj.suffix:
+                final_str += '\t' * 2 + '$sql .= \' %s\';\n' % upd_obj.suffix
             final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
             final_str += '\t' * 2 + 'return $db->update( $sql, $bind );\n'
             final_str += '\t}\n\n'
@@ -814,7 +816,7 @@ class Make(object):
             where_str = tree[0]
             split_key = tree[2]
 
-            if not split_key:
+            if table.split and not split_key:
                 if param_str:
                     param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
                 else:
@@ -852,6 +854,8 @@ class Make(object):
                     final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s`\';\n' % self.table_name
             final_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
             final_str += where_str
+            if del_obj.suffix:
+                final_str += '\t' * 2 + '$sql .= \' %s\';\n' % del_obj.suffix
             final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
             final_str += '\t' * 2 + 'return $db->%s( $sql, $bind );\n' % (
                 'update' if del_obj.real == 'false' else 'delete')
@@ -885,11 +889,12 @@ class Make(object):
         func_doc_comment += '\t' + ' * @return a record or false if record not exist.\n'
         func_doc_comment += '\t' + ' */\n'
 
-        if table.split_custom == table.primary_key:
-            split_key = False
-        else:
-            split_key = True
-            param_str += '\t' * 2 + ', $splitKey\n'
+        if table.split:
+            if table.split_custom == table.primary_key:
+                split_key = False
+            else:
+                split_key = True
+                param_str += '\t' * 2 + ', $splitKey\n'
 
         final_str = ''
         final_str += func_doc_comment
@@ -1021,11 +1026,12 @@ class Make(object):
                 else:
                     where_str += ' . \' AND `%s` = :%s\'' % (f_name, f_name)
 
-            if table.split_custom in param_field_arr:
-                split_key = False
-            else:
-                split_key = True
-                param_str += '\t' * 2 + ', $splitKey\n'
+            if table.split:
+                if table.split_custom in param_field_arr:
+                    split_key = False
+                else:
+                    split_key = True
+                    param_str += '\t' * 2 + ', $splitKey\n'
 
             final_str += '\t' + '/**\n'
             final_str += '\t' + ' * get data by %s\n' % index['name']
@@ -1165,7 +1171,7 @@ class Make(object):
             where_str += tree[0]
             split_key = tree[2]
 
-            if not split_key:
+            if table.split and not split_key:
                 if param_str:
                     param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
                 else:
@@ -1192,6 +1198,8 @@ class Make(object):
             final_str += '\t' * 2 + '$sql = \'SELECT %s FROM `%s`\';\n' % (fields_str, self.table_name)
             final_str += join_str
             final_str += where_str
+            if sel_obj.suffix:
+                final_str += '\t' * 2 + '$sql .= \' %s\';\n' % sel_obj.suffix
             final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
             if sel_obj.single == 'true':
                 final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'

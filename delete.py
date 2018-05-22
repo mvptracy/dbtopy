@@ -8,6 +8,7 @@ class Delete(object):
         self.desc = ''
         self.real = 'false'
         self.where_list = []  # {where_obj, where_obj}
+        self.suffix = ''
 
         self.__node = node
 
