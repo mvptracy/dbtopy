@@ -65,7 +65,7 @@ class Make(object):
             n = 0
             while n < int(table.split):
                 sql_head = 'ALTER TABLE `' + table.prefix + table.name + '_' + str(n) + '`\n'
-                self.__write_file('./add.sql', sql_head + sql, 'w' if n == 0 else 'a')
+                self.__write_file('./add.sql', sql_head + sql)
                 n += 1
                 self.write_mode = 'a'
         else:
@@ -160,8 +160,9 @@ class Make(object):
                 n = 0
                 while n < int(table.split):
                     sql_head = 'CREATE TABLE IF NOT EXISTS `' + table.prefix + table.name + '_' + str(n) + '` (\n'
-                    self.__write_file('./create.sql', sql_head + sql, 'w' if n == 0 else 'a')
+                    self.__write_file('./create.sql', sql_head + sql)
                     n += 1
+                    self.write_mode = 'a'
             else:
                 sql_head = 'CREATE TABLE IF NOT EXISTS `' + table.prefix + table.name + '` (\n'
                 self.__write_file('./create.sql', sql_head + sql)
@@ -198,8 +199,9 @@ class Make(object):
             n = 0
             while n < int(table.split):
                 sql_head = 'INSERT INTO `' + table.prefix + table.name + '_' + str(n) + '`(\n'
-                self.__write_file('./insert.sql', sql_head + sql, 'w' if n == 0 else 'a')
+                self.__write_file('./insert.sql', sql_head + sql)
                 n += 1
+                self.write_mode = 'a'
         else:
             sql_head = 'INSERT INTO `' + table.prefix + table.name + '`(\n'
             self.__write_file('./insert.sql', sql_head + sql)
@@ -232,15 +234,16 @@ class Make(object):
             n = 0
             while n < int(table.split):
                 sql_head = 'ALTER TABLE `' + table.prefix + table.name + '_' + str(n) + '`(\n'
-                self.__write_file('./drop.sql', sql_head + sql, 'w' if n == 0 else 'a')
+                self.__write_file('./drop.sql', sql_head + sql)
                 n += 1
+                self.write_mode = 'a'
         else:
             sql_head = 'ALTER TABLE `' + table.prefix + table.name + '`\n'
             self.__write_file('./drop.sql', sql_head + sql)
 
     def deal_index(self, field, *, add_del=False):
         fd_arr = field.split(',')
-        if add_del:
+        if add_del and 'del' not in fd_arr:
             fd_arr.append('del')
 
         r = map(self.add_field_symbol, fd_arr)
@@ -330,7 +333,7 @@ class Make(object):
         param_str = ''
         bind_str = ''
         for i, f in enumerate(no_param_fields):
-            func_doc_comment += '\t * @param  $%s\n' % f.name
+            func_doc_comment += '\t * @param  $%s\t%s\n' % (f.name, f.desc)
             bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f.name, self.get_bind_value(f))
             if i == 0:
                 param_str += '\t' * 2 + ' ' * 2 + '$%s\n' % f.name
@@ -338,7 +341,7 @@ class Make(object):
                 param_str += '\t' * 2 + ', ' + '$%s\n' % f.name
 
         for f in param_fields:
-            func_doc_comment += '\t * @param  $%s\n' % f.name
+            func_doc_comment += '\t * @param  $%s\t%s\n' % (f.name, f.desc)
             bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f.name, self.get_bind_value(f))
             if param_str == '':
                 param_str += '\t' * 2 + ' ' * 2 + '$%s\n' % f.name
@@ -395,7 +398,7 @@ class Make(object):
                 param_value_fields.append(field)
 
         for i, f in enumerate(param_where_fields):
-            func_doc_comment += '\t * @param  $%s\n' % f.name
+            func_doc_comment += '\t * @param  $%s\t%s\n' % (f.name, f.desc)
             bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f.name, self.get_bind_value(f))
             if i == 0:
                 param_str += '\t' * 3 + '  $%s\n' % f.name
@@ -408,7 +411,7 @@ class Make(object):
         for i, f in enumerate(param_value_fields):
             if f.name in table.DEFAULT_FIELDS:
                 continue
-            func_doc_comment += '\t * @param  $%s\n' % f.name
+            func_doc_comment += '\t * @param  $%s\t%s\n' % (f.name, f.desc)
             bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f.name, self.get_bind_value(f))
             param_str += '\t' * 3 + ', $%s\n' % f.name
             if i == 0:
@@ -456,7 +459,7 @@ class Make(object):
         param_str = ''
         where_str = ''
         for f in table.primary_key.split(','):
-            func_doc_comment += '\t * @param  $%s\n' % f
+            func_doc_comment += '\t * @param  $%s\t%s\n' % (f, table.field_list[f].desc)
             bind_str += '\t' * 3 + '\':%s\' => $%s,\n' % (f, f)
             if param_str == '':
                 param_str += '\t' * 2 + '$%s\n' % f
@@ -511,7 +514,7 @@ class Make(object):
         param_str = ''
         where_str = ''
         for f in table.primary_key.split(','):
-            func_doc_comment += '\t * @param  $%s\n' % f
+            func_doc_comment += '\t * @param  $%s\t%s\n' % (f, table.field_list[f].desc)
             bind_str += '\t' * 3 + '\':%s\' => $%s,\n' % (f, f)
             if param_str == '':
                 param_str += '\t' * 2 + '$%s\n' % f
@@ -619,10 +622,10 @@ class Make(object):
                 sql += ','
 
             # default field
-            sql += ' `verid` bigint,'
-            sql += ' `create_time` datetime,'
-            sql += ' `update_time` datetime,'
-            sql += ' `del` tinyint,'
+            # sql += ' `verid` bigint,'
+            # sql += ' `create_time` datetime,'
+            # sql += ' `update_time` datetime,'
+            # sql += ' `del` tinyint,'
 
             # index
             if table.primary_key != '':
@@ -722,7 +725,7 @@ class Make(object):
             # 更新的字段
             for (f_name, f) in upd_obj.field_list.items():
                 self.field_exist(f_name, table.name)
-                self.tree_func_doc_comment += '\t * @param $%s\n' % f_name
+                self.tree_func_doc_comment += '\t * @param $%s\t%s\n' % (f_name, table.field_list[f_name].desc)
                 bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
                 upd_str += '\t' * 2 + '$sql .= \', %s = :%s\';\n' % (self.add_field_symbol(f_name), f_name)
                 if self.tree_param_str == '':
@@ -866,7 +869,7 @@ class Make(object):
         func_doc_comment += '\t' + ' * get a record.\n'
         for f_name in table.primary_key.split(','):
             field_obj = table.field_list[f_name]
-            func_doc_comment += '\t' + ' * @param  $%s  %s\n' % (f_name, field_obj.desc)
+            func_doc_comment += '\t' + ' * @param  $%s\t%s\n' % (f_name, field_obj.desc)
             if param_str == '':
                 param_str += '\t' * 2 + '$%s\n' % f_name
             else:
@@ -998,10 +1001,12 @@ class Make(object):
             func_name = 'getBy'
             param_field_arr = []
 
-            for f_name in index['value'].replace(' ', '').split(','):
+            for f_name in index['value'].split(','):
+                if f_name == 'del':
+                    continue
                 self.field_exist(f_name, table.name)
                 func_name += f_name.capitalize()
-                func_doc_comment += '\t' + ' * @param  $%s  %s\n' % (f_name, table.field_list[f_name].desc)
+                func_doc_comment += '\t' + ' * @param  $%s\t%s\n' % (f_name, table.field_list[f_name].desc)
                 bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
 
                 if param_str == '':
@@ -1025,6 +1030,7 @@ class Make(object):
             final_str += '\t' + '/**\n'
             final_str += '\t' + ' * get data by %s\n' % index['name']
             final_str += func_doc_comment
+            final_str += '\t' + ' * @return array\n'
             final_str += '\t' + ' */\n'
             final_str += '\t' + 'public static function %s(\n' % func_name
             final_str += param_str
@@ -1369,7 +1375,7 @@ class Make(object):
                     if table.split and (table.split_custom == row['name'] or (
                             table.split_custom == '' and table.primary_key == row['name'])):
                         split_key = variable_name
-                    self.tree_func_doc_comment += '\t * @param (%s) $%s\n' % (comp, variable_name)
+                    self.tree_func_doc_comment += '\t * @param (%s) $%s\t%s\n' % (comp, variable_name, row['name'])
                     if self.tree_param_str:
                         self.tree_param_str += '\t' * 2 + ', $%s\n' % variable_name
                     else:
