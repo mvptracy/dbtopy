@@ -1408,7 +1408,8 @@ class Make(object):
                 tree = self.deal_where_tree(row, table, where_suffix)
                 where_str += tree[0]
                 variable_name_list.append(tree[1])
-                split_key = tree[2]
+                if tree[2]:
+                    split_key = tree[2]
 
         # type拼接
         where_str += '\n\t\t// table:' + tb_name + ', name:' + where_name + ' type:' + type + '\n'
@@ -1418,7 +1419,7 @@ class Make(object):
 
         for v in variable_name_list:
             if sql_name == 'sql':
-                where_str += '\t' * 2 + 'if (false !== $sql_%s)\n' % v
+                where_str += '\t' * 2 + 'if (strlen($sql_%s) > 0)\n' % v
                 where_str += '\t' * 2 + '{\n'
                 where_str += '\t' * 3 + '$sql .= \' AND \' . $sql_%s;\n' % v
                 where_str += '\t' * 2 + '}\n'
