@@ -1109,10 +1109,7 @@ class Make(object):
 
                 if f.get('origin', 'false') == 'false':
                     self.field_exist(f_name, f.get('table', table.name))
-
-                f_obj = self.get_fieldobj(f.get('table', table.name), f_name)
-
-                if f.get('origin', 'false') == 'false':
+                    f_obj = self.get_fieldobj(f.get('table', table.name), f_name)
                     f_name = self.add_field_symbol(f_name)
                     spec_fields[f_name] = f_obj
 
