@@ -17,6 +17,7 @@ class Table(object):
         self.engine = ''
         self.charset = 'utf8'
         self.split_time = ''
+        self.split_locker = ''
         self.primary_key = ''
         self.field_list = {}  # field_name:field_obj
         self.index_list = {}  # index_name:index_obj
