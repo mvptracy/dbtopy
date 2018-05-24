@@ -18,6 +18,7 @@ class Field(object):
         self.desc = ''
         self.charset = ''
         self.unsigned = 'false'
+        self.bind = 'true'
 
         # args
         self.__node = node

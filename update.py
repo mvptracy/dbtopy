@@ -41,5 +41,7 @@ class Update(object):
 
                 self.field_list[field['name']] = field
 
+                self.field_list[field['name']] = field
+
             elif node.tagName == 'where':
                 self.where_list.append(Where(node))

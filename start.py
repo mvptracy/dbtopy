@@ -32,7 +32,9 @@ class DB(object):
 
         root = minidom.parseString(xml_str).documentElement
         tables = Tables(root)
-        tables.xml = etree.parse(self.file_path)
+        # tables.xml = etree.parse(self.file_path)
+        xml_str = bytes(bytearray(xml_str, encoding='utf-8'))
+        tables.xml = etree.ElementTree(etree.fromstring(xml_str))
 
         # table
         table_name_list = []
@@ -119,5 +121,6 @@ class DB(object):
 
 
 if __name__ == '__main__':
+    # db = DB('/Users/tracy//work/project/meiyu/dic/task/db.xml')
     db = DB('/Users/tracy//work/project/meiyu/dic/test/db.xml')
     db.do()

@@ -766,8 +766,11 @@ class Make(object):
             for (f_name, f) in upd_obj.field_list.items():
                 self.field_exist(f_name, table.name)
                 self.tree_func_doc_comment += '\t * @param $%s\t%s\n' % (f_name, table.field_list[f_name].desc)
-                bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
-                upd_str += '\t' * 2 + '$sql .= \', %s = :%s\';\n' % (self.add_field_symbol(f_name), f_name)
+                if f['bind'] == 'true':
+                    bind_str += '\t' * 3 + '\':%s\' => %s,\n' % (f_name, self.get_bind_value(table.field_list[f_name]))
+                    upd_str += '\t' * 2 + '$sql .= \', %s = :%s\';\n' % (self.add_field_symbol(f_name), f_name)
+                else:
+                    upd_str += '\t' * 2 + '$sql .= \', %s = \' . $%s;\n' % (self.add_field_symbol(f_name), f_name)
                 if self.tree_param_str == '':
                     self.tree_param_str += '\t' * 2 + '$%s\n' % f_name
                 else:
@@ -1186,7 +1189,7 @@ class Make(object):
             for f in sel_obj.field_list:
                 f_name = f['name']
 
-                if f_name == '*':
+                if f_name == '*' and 'func' not in f:
                     break
 
                 if f.get('origin', 'false') == 'false':
