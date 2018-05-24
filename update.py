@@ -39,7 +39,7 @@ class Update(object):
                 if node.hasAttribute('value'):
                     field['value'] = node.getAttribute('value')
 
-                self.field_list[field['name']] = field
+                field['bind'] = node.getAttribute('bind') or 'true'
 
                 self.field_list[field['name']] = field
 
