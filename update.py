@@ -1,4 +1,4 @@
-from dbtopy.where import Where
+from db_py.where import Where
 
 
 class Update(object):
@@ -10,6 +10,7 @@ class Update(object):
         self.field_list = {}  # {'id':{'name':'id';'value':'111'}}
         self.where_list = []  # {where_obj, where_obj}
         self.suffix = ''
+        self.primary_cond = ''
 
         self.__node = node
 
@@ -43,5 +44,5 @@ class Update(object):
 
                 self.field_list[field['name']] = field
 
-            elif node.tagName == 'where':
+            elif node.tagName == 'where' and self.primary_cond == 'false':
                 self.where_list.append(Where(node))

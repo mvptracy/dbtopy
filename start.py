@@ -1,12 +1,12 @@
 import xml.dom.minidom as minidom
-from dbtopy.tables import Tables
-from dbtopy.table import Table
-from dbtopy.field import Field
-from dbtopy.index import Index
-from dbtopy.make import Make
-from dbtopy.update import Update
-from dbtopy.delete import Delete
-from dbtopy.select import Select
+from db_py.tables import Tables
+from db_py.table import Table
+from db_py.field import Field
+from db_py.index import Index
+from db_py.make import Make
+from db_py.update import Update
+from db_py.delete import Delete
+from db_py.select import Select
 from lxml import etree
 
 
@@ -108,12 +108,14 @@ class DB(object):
     def make_file(self):
         n = 1
         for (tb_name, table) in self.tables.table.items():
-            # 写sql文件
             make = Make(n, self.tables)
-            make.make_add_sql(table)
-            make.make_drop_sql(table)
-            make.make_insert_sql(table)
-            make.make_create_sql(table)
+
+            # 写sql文件
+            if table.readonly == 'false':
+                make.make_add_sql(table)
+                make.make_drop_sql(table)
+                make.make_insert_sql(table)
+                make.make_create_sql(table)
 
             # 写php文件
             make.make_php_file(table)

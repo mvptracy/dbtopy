@@ -1,4 +1,4 @@
-from dbtopy.field import Field
+from db_py.field import Field
 
 
 class Make(object):
@@ -312,6 +312,8 @@ class Make(object):
 
     # function add
     def get_default_add_str(self, table):
+        if table.readonly == 'true':
+            return ''
         func_doc_comment = '\t/**\n'
         func_doc_comment += '\t * add a record\n'
 
@@ -396,6 +398,8 @@ class Make(object):
         return final_str
 
     def get_default_upd_str(self, table):
+        if table.readonly == 'true':
+            return ''
         func_doc_comment = '\t/**\n'
         func_doc_comment += '\t * update a record\n'
 
@@ -426,7 +430,6 @@ class Make(object):
         if table.split_time:
             func_doc_comment += '\t * @param $recordTimestamp\n'
             param_str += '\t' * 3 + ', $recordTimestamp\n'
-
 
         for i, f in enumerate(param_value_fields):
             if f.name in table.DEFAULT_FIELDS:
@@ -461,7 +464,8 @@ class Make(object):
             final_str += self.get_split_str(table)
             final_str += '\t' * 2 + '$sql = \'update `%s_\' . $dbIndex . \'` set \';\n' % self.table_name
         elif table.split_time:
-            final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % self.get_time_suffix(table)[0]
+            final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % \
+                         self.get_time_suffix(table)[0]
             final_str += '\t' * 2 + '$sql = \'update `%s\' . $timeSuffix . \'` set \';\n' % self.table_name
         else:
             final_str += '\t' * 2 + '$sql = \'update %s set \';\n' % self.table_name
@@ -475,6 +479,8 @@ class Make(object):
         return final_str
 
     def get_default_del_str(self, table):
+        if table.readonly == 'true':
+            return ''
         func_doc_comment = '\t/**\n'
         func_doc_comment += '\t * delete a record\n'
 
@@ -499,7 +505,7 @@ class Make(object):
         func_doc_comment += '\t */\n'
 
         if table.split:
-            if table.split_custom == table.primary_key:
+            if table.split_custom == table.primary_key or table.primary_cond == 'true':
                 split_key = False
             else:
                 split_key = True
@@ -525,7 +531,8 @@ class Make(object):
             final_str += self.get_split_str(table, split_key)
             final_str += '\t' * 2 + '$sql = \'UPDATE `%s_\' . $dbIndex . \'` SET update_time=\\\'\' . $curDateTime . \'\\\', del=1 WHERE \';\n' % self.table_name
         elif table.split_time:
-            final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % self.get_time_suffix(table)[0]
+            final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % \
+                         self.get_time_suffix(table)[0]
             final_str += '\t' * 2 + '$sql = \'UPDATE `%s\' . $timeSuffix . \'` SET update_time=\\\'\' . $curDateTime . \'\\\', del=1 WHERE \';\n' % self.table_name
         else:
             final_str += '\t' * 2 + '$sql = \'UPDATE `%s` SET update_time=\\\'\' . $curDateTime . \'\\\', del=1 WHERE \';\n' % self.table_name
@@ -538,6 +545,8 @@ class Make(object):
         return final_str
 
     def get_default_delreal_str(self, table):
+        if table.readonly == 'true':
+            return ''
         func_doc_comment = '\t/**\n'
         func_doc_comment += '\t * delete a record real\n'
 
@@ -561,7 +570,7 @@ class Make(object):
         func_doc_comment += '\t */\n'
 
         if table.split:
-            if table.split_custom == table.primary_key:
+            if table.split_custom == table.primary_key or table.primary_cond == 'true':
                 split_key = False
             else:
                 split_key = True
@@ -581,13 +590,12 @@ class Make(object):
         final_str += '\t' * 2 + '$bind = [\n'
         final_str += bind_str
         final_str += '\t' * 2 + '];\n'
-        final_str += '\t' * 2 + '$datetime = new \DateTime;\n'
-        final_str += '\t' * 2 + '$curDateTime = $datetime->format(\'Y-m-d H:i:s\');\n'
         if table.split:
             final_str += self.get_split_str(table, split_key)
             final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s_\' . $dbIndex . \'` WHERE \';\n' % self.table_name
         elif table.split_time:
-            final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % self.get_time_suffix(table)[0]
+            final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % \
+                         self.get_time_suffix(table)[0]
             final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s\' . $timeSuffix . \'` WHERE \';\n' % self.table_name
         else:
             final_str += '\t' * 2 + '$sql = \'DELETE FROM `%s` WHERE \';\n' % self.table_name
@@ -600,6 +608,8 @@ class Make(object):
         return final_str
 
     def get_default_create_str(self, table):
+        if table.readonly == 'true':
+            return ''
         final_str = '\tpublic static function create()\n'
         final_str += '\t{\n'
         final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::create\']))\n' % (
@@ -711,6 +721,8 @@ class Make(object):
         return final_str
 
     def get_default_trans_str(self, table):
+        if table.readonly == 'true':
+            return ''
         final_str = '\tpublic static function startTransaction()\n'
         final_str += '\t{\n'
         final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::startTransaction\']))\n' % (
@@ -750,6 +762,8 @@ class Make(object):
         return final_str
 
     def get_custom_upd_str(self, table):
+        if table.readonly == 'true':
+            return ''
         final_str = ''
         if table.split_time:
             return final_str
@@ -786,14 +800,23 @@ class Make(object):
             func_doc_comment = self.tree_func_doc_comment
             param_str = self.tree_param_str
             where_str += tree[0]
-            split_key = tree[2]
+            split_key = tree[2]  # where里有无表分隔字段
 
-            if table.split and not split_key:
-                if param_str:
-                    param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
-                else:
-                    param_str = '\t' * 2 + '$splitKey\n'
-                split_key = True
+            if table.split:
+                if upd_obj.primary_cond == 'true':
+                    split_key = table.primary_key + '_cond'
+                    where_str += '\t' * 2 + '$sql .= \' AND `%s`= :%s\';\n' % (table.primary_key, split_key)
+                    bind_str += '\t' * 3 + '\':%s\' => $%s,\n' % (split_key, split_key)
+                    if param_str:
+                        param_str = '\t' * 2 + '$' + split_key + '\n\t\t, ' + param_str[2:]
+                    else:
+                        param_str = '\t' * 2 + '$' + split_key + '\n'
+                elif split_key == '':
+                    if param_str:
+                        param_str = '\t' * 2 + '$splitKey\n\t\t, ' + param_str[2:]
+                    else:
+                        param_str = '\t' * 2 + '$splitKey\n'
+                    split_key = True
 
             if upd_obj.lock == 'true':
                 where_str += '\t' * 2 + '$bind[\':verid\'] = $oldVerId;\n'
@@ -839,6 +862,8 @@ class Make(object):
         return final_str
 
     def get_custom_del_str(self, table):
+        if table.readonly == 'true':
+            return ''
         final_str = ''
         if table.split_time:
             return final_str
@@ -938,7 +963,7 @@ class Make(object):
         func_doc_comment += '\t' + ' */\n'
 
         if table.split:
-            if table.split_custom == table.primary_key:
+            if table.split_custom == table.primary_key or table.primary_cond == 'true':
                 split_key = False
             else:
                 split_key = True
@@ -1260,6 +1285,13 @@ class Make(object):
                     param_str = '\t' * 2 + '$splitKey\n'
                 split_key = True
 
+            if sel_obj.page == 'true':
+                if param_str == '':
+                    param_str += '\t' * 2 + '$pageId\n'
+                else:
+                    param_str += '\t' * 2 + ', $pageId\n'
+                param_str += '\t' * 2 + ', $pageSize\n'
+
             final_str += '\t/**\n'
             final_str += '\t * %s\n' % sel_obj.desc
             final_str += func_doc_comment
@@ -1290,6 +1322,8 @@ class Make(object):
             final_str += where_str
             if sel_obj.suffix:
                 final_str += '\t' * 2 + '$sql .= \' %s\';\n' % sel_obj.suffix
+            if sel_obj.page == 'true':
+                final_str += '\t' * 2 + '$sql .= \' LIMIT \' . $pageId*$pageSize . \', \' . $pageSize;\n'
             final_str += '\t' * 2 + '$db = %s::getInstance( \'%s\' );\n' % (self.MYSQL_NAMESPACE, table.config)
             if sel_obj.single == 'true':
                 final_str += '\t' * 2 + '$rs = $db->fetchRow( $sql, $bind );\n'
@@ -1369,7 +1403,8 @@ class Make(object):
         if field.type == 'datetime':
             return '%s::timestamp2dbTime($%s)' % (self.MYSQL_NAMESPACE, f_name)
         elif field.array == 'true':
-            return '\'__begin_flag__,\' . implode(\',\', is_array($%s) ? $%s : [$%s]) . \',__end_flag__\'' % (f_name, f_name, f_name)
+            return '\'__begin_flag__,\' . implode(\',\', is_array($%s) ? $%s : [$%s]) . \',__end_flag__\'' % (
+            f_name, f_name, f_name)
         elif field.map == 'true':
             return 'json_encode($%s)' % f_name
         else:
@@ -1606,7 +1641,7 @@ class Make(object):
         raise ValueError('table_prefix: %s, table:%s' % (table_prefix, table_name))
 
     def get_split_str(self, table, split_key=False):
-        # table.split table.split_custom table.primary_key
+        # table.split table.split_custom table.primary_key table.primary_cond
         final_str = ''
 
         if split_key:
@@ -1647,7 +1682,7 @@ class Make(object):
             if unique == 'true':
                 if f_obj.type == 'datetime':
                     final_str += '\t' * 2 + '$rs[\'%s\'] = %s::dbTime2Timestamp($rs[\'%s\']);\n' % (
-                    f_name, self.MYSQL_NAMESPACE, f_name)
+                        f_name, self.MYSQL_NAMESPACE, f_name)
                 if f_obj.array == 'true':
                     final_str += '\t' * 2 + '$rs[\'%s\'] = explode( \',\', $rs[\'%s\'] );\n' % (f_name, f_name)
                     final_str += '\t' * 2 + 'array_pop( $rs[\'%s\'] );\n' % f_name
@@ -1657,7 +1692,7 @@ class Make(object):
             else:
                 if f_obj.type == 'datetime':
                     final_str += '\t' * 4 + '$v[\'%s\'] = %s::dbTime2Timestamp($v[\'%s\']);\n' % (
-                    f_name, self.MYSQL_NAMESPACE, f_name)
+                        f_name, self.MYSQL_NAMESPACE, f_name)
                 if f_obj.array == 'true':
                     final_str += '\t' * 4 + '$v[\'%s\'] = explode( \',\', $v[\'%s\'] );\n' % (f_name, f_name)
                     final_str += '\t' * 4 + 'array_pop( $v[\'%s\'] );\n' % f_name
@@ -1702,8 +1737,10 @@ class Make(object):
     def get_add_split_time_str(self, table):
         final_str = ''
 
-        final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % self.get_time_suffix(table)[0]
-        final_str += '\t' * 2 + '$tableTime = %s::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % (self.MYSQL_NAMESPACE, self.get_time_suffix(table)[1])
+        final_str += '\t' * 2 + '$timeSuffix = \'_\' . \Sooh\DB\Mysql::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % \
+                     self.get_time_suffix(table)[0]
+        final_str += '\t' * 2 + '$tableTime = %s::timestamp2dbTime( $recordTimestamp, \'%s\' );\n' % (
+        self.MYSQL_NAMESPACE, self.get_time_suffix(table)[1])
         final_str += '\t' * 2 + '$tableName = \'%s\' . $timeSuffix;\n' % self.table_name
         final_str += '\t' * 2 + '$tmpSql = \'SELECT id FROM `%s_index` WHERE table_name=\\\'\' . $tableName . \'\\\'\';\n' % self.table_name
         final_str += '\t' * 2 + '$db = %s::getInstance( \'dbConf.test\' );\n' % self.MYSQL_NAMESPACE
@@ -1793,6 +1830,3 @@ class Make(object):
         if table.split_locker:
             final_str += '\t' * 2 + '\Sooh\Lock\LockerCtrl::%sUnlock();\n' % table.split_locker
         return final_str
-
-
-

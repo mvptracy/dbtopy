@@ -11,6 +11,7 @@ class Table(object):
         self.prefix = None
         self.split = 0
         self.split_custom = ''
+        self.primary_cond = ''
         self.readonly = 'false'
         self.logic_del = 'true'
         self.db = ''
@@ -18,7 +19,6 @@ class Table(object):
         self.charset = 'utf8'
         self.split_time = ''
         self.split_locker = ''
-        self.primary_key = ''
         self.field_list = {}  # field_name:field_obj
         self.index_list = {}  # index_name:index_obj
         self.index_name_list = []

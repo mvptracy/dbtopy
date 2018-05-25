@@ -1,4 +1,4 @@
-from dbtopy.where import Where
+from db_py.where import Where
 
 
 class Delete(object):
@@ -9,6 +9,7 @@ class Delete(object):
         self.real = 'false'
         self.where_list = []  # {where_obj, where_obj}
         self.suffix = ''
+        self.primary_cond = ''
 
         self.__node = node
 
