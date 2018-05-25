@@ -1,5 +1,5 @@
-from db_py.where import Where
-from db_py.join import Join
+from dbtopy.where import Where
+from dbtopy.join import Join
 
 
 class Select(object):

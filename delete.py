@@ -1,4 +1,4 @@
-from db_py.where import Where
+from dbtopy.where import Where
 
 
 class Delete(object):
