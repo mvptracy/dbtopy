@@ -1,4 +1,4 @@
-from dbtopy.field import Field
+from db_py.field import Field
 
 
 class Make(object):

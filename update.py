@@ -1,4 +1,4 @@
-from dbtopy.where import Where
+from db_py.where import Where
 
 
 class Update(object):
