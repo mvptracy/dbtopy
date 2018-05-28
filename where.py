@@ -1,5 +1,5 @@
 class Where(object):
-    KEY = ('name', 'type', 'like', 'comp', 'suffix', 'table', 'table_prefix', 'value')
+    KEY = ('name', 'type', 'like', 'comp', 'suffix', 'table', 'table_prefix', 'value', 'not_like')
 
     def __init__(self, node):
         self.node = node

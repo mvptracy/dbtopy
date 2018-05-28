@@ -12,8 +12,8 @@ class Table(object):
         self.split = 0
         self.split_custom = ''
         self.primary_cond = ''
-        self.readonly = 'false'
-        self.logic_del = 'true'
+        self.readonly = None
+        self.logic_del = None
         self.db = ''
         self.engine = ''
         self.charset = 'utf8'
@@ -26,6 +26,7 @@ class Table(object):
         self.delete = []  # delete_obj
         self.select = []  # select_obj
         self.merge = 'true'  # =false 没有gettop和getall
+        self.primary_key = ''
 
         # args
         self.__node_table = node_table
@@ -50,9 +51,13 @@ class Table(object):
             self.db_type = self.__tables.db_type
         if self.prefix is None:
             self.prefix = self.__tables.prefix
+        if self.readonly is None:
+            self.readonly = self.__tables.readonly
+        if self.logic_del is None:
+            self.logic_del = self.__tables.logic_del
 
     def add_field(self, field, default=False):
-        if field.name in self.DEFAULT_FIELDS and default == False:
+        if field.name in self.DEFAULT_FIELDS and default is False and self.readonly == 'true':
             raise ValueError('field repeat:' + field.name)
 
         if field.name in self.field_list:

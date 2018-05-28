@@ -8,6 +8,8 @@ class Tables(object):
         self.prefix = ''
         self.table = {}  # table_name:table_obj
         self.xml = None
+        self.readonly = 'false'
+        self.logic_del = 'true'
 
         # args
         self.__node_tables = node_tables

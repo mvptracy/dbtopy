@@ -306,9 +306,6 @@ class Make(object):
 
         w_str = head_str + get_table_name_str + add_str + upd_str + del_str + real_del_str + create_str + trans_str + custom_del_str + custom_upd_str + get_str + getall_str + gettop_str + get_by_index_str + custom_select_str + bottom_str
         self.__write_file(self.class_name + '.php', w_str, 'w')
-        self.__write_file(
-            '/Users/tracy/work/project/meiyu/php/server/application/library/Test/Data/' + self.class_name + '.php',
-            w_str, 'w')
 
     # function add
     def get_default_add_str(self, table):
@@ -1389,13 +1386,13 @@ class Make(object):
             return '\'%s\'' % field.param
 
     def get_bind_value(self, field, variable_name=None, value=None):
-        if value != None:
+        if value is not None:
             if self.is_int(field.type):
                 return value
             else:
                 return '\'' + value + '\''
 
-        if variable_name != None:
+        if variable_name is not None:
             f_name = variable_name
         else:
             f_name = field.name
@@ -1525,6 +1522,9 @@ class Make(object):
                         where_str += '\t' * 3 + '}\n'
                         where_str += '\t' * 3 + '$bind[\':%s\'] = $%s;\n' % (
                             variable_name, variable_name)
+                    elif 'like' in row or 'not_like' in row:
+                        where_str += '\t' * 3 + '$bind[\':%s\'] = \'%%\' . $%s . \'%%\';\n' % (
+                            variable_name, variable_name)
                     else:
                         where_str += '\t' * 3 + '$bind[\':%s\'] = %s;\n' % (
                             variable_name,
@@ -1533,6 +1533,12 @@ class Make(object):
                 if comp in ('IN', 'NOT IN'):
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
                         variable_name, self.get_field_table(row, table), f_name, comp, variable_name)
+                elif 'like' in row:
+                    where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` LIKE :%s)\';\n' % (
+                        variable_name, self.get_field_table(row, table), f_name, variable_name)
+                elif 'not_like' in row:
+                    where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` NOT LIKE :%s)\';\n' % (
+                        variable_name, self.get_field_table(row, table), f_name, variable_name)
                 else:
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s :%s)\';\n' % (
                         variable_name, self.get_field_table(row, table), f_name, comp, variable_name)
@@ -1645,7 +1651,7 @@ class Make(object):
         final_str = ''
 
         if split_key:
-            if split_key == True:
+            if split_key is True:
                 final_str += '\t' * 2 + '$tmpKey = $splitKey;\n'
             else:
                 final_str += '\t' * 2 + '$tmpKey = $%s;\n' % split_key
@@ -1662,9 +1668,8 @@ class Make(object):
             final_str += '\t' * 2 + '$hash = \\Sooh\\Base\\Utils::hash( $tmpKey );\n'
             final_str += '\t' * 2 + '$dbIndex = $hash%%%s;\n' % table.split
         else:
-            if ',' not in table.primary_key and self.tables.xml.xpath(
-                    '//tables/table[@name="' + table.name + '"]/field[@name="' + table.primary_key + '"]/@auto')[
-                0] == 'true':
+            if ',' not in table.primary_key and len(self.tables.xml.xpath(
+                    '//tables/table[@name="' + table.name + '"]/field[@name="' + table.primary_key + '"]/@auto')) > 0:
                 raise ValueError('auto increment primary key must need split_custom')
             for f_name in table.primary_key.split(','):
                 self.field_exist(f_name, table.name)
