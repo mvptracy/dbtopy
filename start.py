@@ -6,7 +6,7 @@ from db_py.index import Index
 from db_py.make import Make
 from db_py.update import Update
 from db_py.delete import Delete
-from db_py.select import Select
+from db_py.sel import Select
 from lxml import etree
 
 
