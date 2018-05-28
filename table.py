@@ -57,11 +57,12 @@ class Table(object):
             self.logic_del = self.__tables.logic_del
 
     def add_field(self, field, default=False):
-        if field.name in self.DEFAULT_FIELDS and default is False and self.readonly == 'true':
-            raise ValueError('field repeat:' + field.name)
+        if self.readonly == 'false':
+            if field.name in self.DEFAULT_FIELDS and default is False:
+                raise ValueError('field repeat:' + field.name)
 
-        if field.name in self.field_list:
-            raise ValueError('field repeat:' + field.name)
+            if field.name in self.field_list:
+                raise ValueError('field repeat:' + field.name)
 
         self.field_list[field.name] = field
         if field.primary == 'true':
