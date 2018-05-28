@@ -10,7 +10,7 @@ class Update(object):
         self.field_list = {}  # {'id':{'name':'id';'value':'111'}}
         self.where_list = []  # {where_obj, where_obj}
         self.suffix = ''
-        self.primary_cond = ''
+        self.primary_cond = 'false'
 
         self.__node = node
 

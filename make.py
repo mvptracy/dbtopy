@@ -1224,7 +1224,7 @@ class Make(object):
                     tb = f.get('table_prefix', table.prefix) + f.get('table', table.name)
                     if table.split_time and tb == self.table_name:
                         tb = '\' . $tableName . \''
-                    f_name = '`%s`.' % (tb + f_name)
+                    f_name = '`%s`.%s' % (tb, f_name)
 
                 if f.get('unique', 'false') == 'true':
                     f_name = 'DISTINCT ' + f_name
