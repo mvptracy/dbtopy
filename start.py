@@ -76,25 +76,26 @@ class DB(object):
                         # print('deal select')
                         table.add_select(Select(node))
 
-                v = Field(None)
-                v.name = 'verid'
-                v.type = 'bigint'
-                table.add_field(v, True)
+                if table.readonly == 'false':
+                    v = Field(None)
+                    v.name = 'verid'
+                    v.type = 'bigint'
+                    table.add_field(v, True)
 
-                c = Field(None)
-                c.name = 'create_time'
-                c.type = 'datetime'
-                table.add_field(c, True)
+                    c = Field(None)
+                    c.name = 'create_time'
+                    c.type = 'datetime'
+                    table.add_field(c, True)
 
-                u = Field(None)
-                u.name = 'update_time'
-                u.type = 'datetime'
-                table.add_field(u, True)
+                    u = Field(None)
+                    u.name = 'update_time'
+                    u.type = 'datetime'
+                    table.add_field(u, True)
 
-                d = Field(None)
-                d.name = 'del'
-                d.type = 'tinyint'
-                table.add_field(d, True)
+                    d = Field(None)
+                    d.name = 'del'
+                    d.type = 'tinyint'
+                    table.add_field(d, True)
 
                 tables.add_table(table)
 

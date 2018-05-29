@@ -34,7 +34,7 @@ class Select(object):
                 continue
 
             if node.tagName == 'field':
-                field = {}
+                field = dict()
                 if node.hasAttribute('name'):
                     field['name'] = node.getAttribute('name')
                 else:

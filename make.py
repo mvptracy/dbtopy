@@ -1079,13 +1079,14 @@ class Make(object):
         index_list = []
         final_str = ''
         for (index_name, index_obj) in table.index_list.items():
-            t = {}
-            t['name'] = index_obj.name
-            t['value'] = index_obj.value
-            t['unique'] = index_obj.unique
-            index_list.append(t)
+            if index_obj.value != table.primary_key:
+                t = dict()
+                t['name'] = index_obj.name
+                t['value'] = index_obj.value
+                t['unique'] = index_obj.unique
+                index_list.append(t)
         # primary key
-        t = {}
+        t = dict()
         t['name'] = table.primary_key
         t['value'] = table.primary_key
         t['unique'] = 'true'
@@ -1204,7 +1205,7 @@ class Make(object):
                 has_join = False
 
             if len(sel_obj.field_list) > 0:
-                spec_fields = {}
+                spec_fields = dict()
             else:
                 spec_fields = table.field_list
             # 查询的字段
@@ -1218,7 +1219,8 @@ class Make(object):
                     self.field_exist(f_name, f.get('table', table.name))
                     f_obj = self.get_fieldobj(f.get('table', table.name), f_name)
                     f_name = self.add_field_symbol(f_name)
-                    spec_fields[f['name']] = f_obj
+                    if f['name'] not in table.DEFAULT_FIELDS:
+                        spec_fields[f['name']] = f_obj
 
                 if has_join:
                     tb = f.get('table_prefix', table.prefix) + f.get('table', table.name)
@@ -1504,6 +1506,10 @@ class Make(object):
                             variable_name,
                             self.get_bind_value(self.tables.table[field_table_name].field_list[f_name], variable_name,
                                                 row['value']))
+                elif 'null' in row and row['null'] == 'true':
+                    # is null 不需要bind
+                    where_str += '\t' * 2 + 'if ( true )\n'
+                    where_str += '\t' * 2 + '{\n'
                 else:
                     if table.split and (table.split_custom == row['name'] or (
                             table.split_custom == '' and table.primary_key == row['name'])):
@@ -1533,12 +1539,15 @@ class Make(object):
                 if comp in ('IN', 'NOT IN'):
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s (:%s))\';\n' % (
                         variable_name, self.get_field_table(row, table), f_name, comp, variable_name)
-                elif 'like' in row:
+                elif 'like' in row and row['like'] == 'true':
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` LIKE :%s)\';\n' % (
                         variable_name, self.get_field_table(row, table), f_name, variable_name)
-                elif 'not_like' in row:
+                elif 'not_like' in row and row['not_like'] == 'true':
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` NOT LIKE :%s)\';\n' % (
                         variable_name, self.get_field_table(row, table), f_name, variable_name)
+                elif 'null' in row and row['null'] == 'true':
+                    where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` is NULL)\';\n' % (
+                        variable_name, self.get_field_table(row, table), f_name)
                 else:
                     where_str += '\t' * 3 + '$sql_%s = \'(`%s`.`%s` %s :%s)\';\n' % (
                         variable_name, self.get_field_table(row, table), f_name, comp, variable_name)

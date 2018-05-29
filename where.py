@@ -1,5 +1,5 @@
 class Where(object):
-    KEY = ('name', 'type', 'like', 'comp', 'suffix', 'table', 'table_prefix', 'value', 'not_like')
+    KEY = ('name', 'type', 'like', 'comp', 'suffix', 'table', 'table_prefix', 'value', 'not_like', 'null')
 
     def __init__(self, node):
         self.node = node
@@ -8,7 +8,7 @@ class Where(object):
 
     def deal_xml(self, node):
 
-        w = {}
+        w = dict()
 
         if node.hasChildNodes():
             # 嵌套

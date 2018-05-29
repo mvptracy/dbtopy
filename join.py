@@ -36,7 +36,7 @@ class Join(object):
         return join
 
     def deal_cond(self, node):
-        cond = {}
+        cond = dict()
         if node.hasChildNodes():
             # 有嵌套
             if node.hasAttribute('type') and node.getAttribute('type') in ('or', 'and'):
