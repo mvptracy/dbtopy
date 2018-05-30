@@ -8,6 +8,7 @@ from db_py.update import Update
 from db_py.delete import Delete
 from db_py.sel import Select
 from lxml import etree
+from db_py.make_redis import MakeRedis
 
 
 class DB(object):
@@ -97,30 +98,42 @@ class DB(object):
                     d.type = 'tinyint'
                     table.add_field(d, True)
 
-                tables.add_table(table)
-
             elif table.db_type == 'redis':
-                pass
+                for node in elem.childNodes:
+                    if node.nodeType != node.ELEMENT_NODE:
+                        continue
+
+                    if node.nodeName == 'field':
+                        table.add_field(Field(node))
+                    else:
+                        raise AttributeError(node.nodeName)
+
             elif table.db_type == 'file':
                 pass
+
+            tables.add_table(table)
 
         self.tables = tables
 
     def make_file(self):
         n = 1
         for (tb_name, table) in self.tables.table.items():
-            make = Make(n, self.tables)
+            if table.db_type == 'mysql':
+                make = Make(n, self.tables)
 
-            # 写sql文件
-            if table.readonly == 'false':
-                make.make_add_sql(table)
-                make.make_drop_sql(table)
-                make.make_insert_sql(table)
-                make.make_create_sql(table)
+                # 写sql文件
+                if table.readonly == 'false':
+                    make.make_add_sql(table)
+                    make.make_drop_sql(table)
+                    make.make_insert_sql(table)
+                    make.make_create_sql(table)
 
-            # 写php文件
-            make.make_php_file(table)
-            n += 1
+                # 写php文件
+                make.make_php_file(table)
+                n += 1
+            elif table.db_type == 'redis':
+                make_redis = MakeRedis(self.tables)
+                make_redis.make_php_file(table)
 
 
 if __name__ == '__main__':
