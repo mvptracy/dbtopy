@@ -552,7 +552,7 @@ class MakeRedis(object):
         final_str += '\t' * 2 + '{\n'
         final_str += '\t' * 3 + 'return $db->set(\n'
         final_str += '\t' * 4 + '$tableIndex,\n'
-        final_str += '\t' * 4 + '$keyIndex\n'
+        final_str += '\t' * 4 + '$keyIndex,\n'
         final_str += '\t' * 4 + 'json_encode($rs)\n'
         final_str += '\t' * 3 + ');\n'
         final_str += '\t' * 2 + '}\n'
