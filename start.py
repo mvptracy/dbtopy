@@ -9,6 +9,7 @@ from db_py.delete import Delete
 from db_py.sel import Select
 from lxml import etree
 from db_py.make_redis import MakeRedis
+from db_py.make_file import MakeFile
 
 
 class DB(object):
@@ -109,7 +110,14 @@ class DB(object):
                         raise AttributeError(node.nodeName)
 
             elif table.db_type == 'file':
-                pass
+                for node in elem.childNodes:
+                    if node.nodeType != node.ELEMENT_NODE:
+                        continue
+
+                    if node.nodeName == 'field':
+                        table.add_field(Field(node))
+                    else:
+                        raise AttributeError(node.nodeName)
 
             tables.add_table(table)
 
@@ -134,6 +142,9 @@ class DB(object):
             elif table.db_type == 'redis':
                 make_redis = MakeRedis(self.tables)
                 make_redis.make_php_file(table)
+            elif table.db_type == 'file':
+                make_file = MakeFile(self.tables)
+                make_file.make_php_file(table)
 
 
 if __name__ == '__main__':

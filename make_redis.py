@@ -213,7 +213,7 @@ class MakeRedis(object):
 
         func_doc_comment += '\t */\n'
 
-        values_str += '\t' * 3 + '\'verid\' => 1,\n'
+        values_str += '\t' * 3 + '\'verid\' => $rs[\'verid\'] + 1,\n'
         values_str += '\t' * 3 + '\'update_time\' => $curDateTime,\n'
         values_str += '\t' * 3 + '\'del\' => 0,\n'
 
