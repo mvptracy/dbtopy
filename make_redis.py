@@ -547,7 +547,7 @@ class MakeRedis(object):
     def del_index_str(self, index_value, pk=False):
         final_str = ''
         final_str += '\t' * 2 + '$tableIndex = \'%s\';\n' % self.get_table_index(index_value, pk)
-        final_str += '\t' * 2 + '$keyIndex = %s\n' % ' . \'_\' . '.join(['$rs[\'%s\']' % v for v in index_value.split(',')])
+        final_str += '\t' * 2 + '$keyIndex = %s;\n' % ' . \'_\' . '.join(['$rs[\'%s\']' % v for v in index_value.split(',')])
         final_str += '\t' * 2 + '$rs = $db->get(\n'
         final_str += '\t' * 3 + '$tableIndex,\n'
         final_str += '\t' * 3 + '$keyIndex\n'

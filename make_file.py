@@ -342,7 +342,7 @@ class MakeFile(object):
         final_str += '\t' * 2 + '$key .= %s;\n' % self.get_key_index(table.primary_key)
         final_str += '\t' * 2 + '$curDateTime = \\Sooh\\Base\\Utils::getTime();\n'
         final_str += '\t' * 2 + '$db = \Sooh\DB\LocalStorage::getInstance(\'%s\');\n' % table.config
-        final_str += '\t' * 2 + '$rs = $db->get($key)\n'
+        final_str += '\t' * 2 + '$rs = $db->get($key);\n'
         final_str += '\t' * 2 + 'if (!$rs)\n'
         final_str += '\t' * 2 + '{\n'
         final_str += '\t' * 3 + 'return false;\n'
