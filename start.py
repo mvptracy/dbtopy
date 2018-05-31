@@ -106,6 +106,10 @@ class DB(object):
 
                     if node.nodeName == 'field':
                         table.add_field(Field(node))
+                    elif node.nodeName == 'index':
+                        table.add_index(Index(node))
+                    elif node.nodeName == 'primary':
+                        table.add_primary(Index(node))
                     else:
                         raise AttributeError(node.nodeName)
 
@@ -148,6 +152,6 @@ class DB(object):
 
 
 if __name__ == '__main__':
-    # db = DB('/Users/tracy//work/project/meiyu/dic/task/db.xml')
-    db = DB('/Users/tracy//work/project/meiyu/dic/test/db.xml')
+    # db = DB('/Users/tracy/work/project/meiyu/dic/task/db.xml')
+    db = DB('/Users/tracy/work/project/meiyu/dic/test/db.xml')
     db.do()

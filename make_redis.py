@@ -31,10 +31,9 @@ class MakeRedis(object):
         getall_str = self.get_default_getall_str(table)
         del_str = self.get_default_del_str(table)
         real_del_str = self.get_default_delreal_str(table)
-        # gettop_str = self.get_default_gettop_str(table)
+        gettop_str = self.get_default_gettop_str()
 
-        w_str = head_str + add_str + upd_str + get_str + get_index_str + getall_str + del_str + real_del_str + bottom_str
-                # + upd_str + del_str + real_del_str + create_str  + getall_str + gettop_str \
+        w_str = head_str + add_str + upd_str + get_str + gettop_str + get_index_str + getall_str + del_str + real_del_str + bottom_str
 
         self.__write_file(self.class_name + '.php', w_str, 'w')
 
@@ -62,6 +61,20 @@ class MakeRedis(object):
     def __write_file(self, file_path, content, append=''):
         with open(file_path, 'w', 1024, 'utf8') as fp:
             fp.write(content)
+
+    def get_table_index(self, index_value, add_del=False):
+        if add_del:
+            return self.table_name + '_index_' + index_value.replace(',', '_') + '_del'
+        else :
+            return self.table_name + '_index_' + index_value.replace(',', '_')
+
+
+    @staticmethod
+    def get_key_index(index_value):
+        new = ['$'+ v for v in index_value.split(',')]
+        return ' . \'_\' . '.join(new)
+
+
 
     def get_default_add_str(self, table):
         func_doc_comment = '\t/**\n'
@@ -116,7 +129,7 @@ class MakeRedis(object):
             self.deal_namespace(table.namespace), self.class_name)
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '$key = \'\';\n'
-        final_str += '\t' * 2 + '$key .= $%s;\n' % table.primary_key
+        final_str += '\t' * 2 + '$key .= %s;\n' % self.get_key_index(table.primary_key)
         final_str += '\t' * 2 + '$curDateTime = \\Sooh\\Base\\Utils::getTime();\n'
         final_str += '\t' * 2 + '$values = [\n'
         final_str += values_str
@@ -131,8 +144,21 @@ class MakeRedis(object):
         final_str += '\t' * 3 + 'return false;\n'
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '\n'
-        final_str += '\t' * 2 + '$tableIndex = \'%s_index_%s_del\';\n' % (self.table_name, table.primary_key)
-        final_str += '\t' * 2 + '$keyIndex = $%s;\n' % table.primary_key
+
+        for index,index_obj in table.index_list.items():
+            final_str += self.set_index_table_str(index_obj.value)
+
+        final_str += self.set_index_table_str(table.primary_key, True)
+
+        final_str += '\t' * 2 + 'return true;\n'
+        final_str += '\t}\n\n'
+
+        return final_str
+
+    def set_index_table_str(self, index_value, pk=False):
+        final_str = ''
+        final_str += '\t' * 2 + '$tableIndex = \'%s\';\n' % self.get_table_index(index_value, pk)
+        final_str += '\t' * 2 + '$keyIndex = %s;\n' % self.get_key_index(index_value)
         final_str += '\t' * 2 + '$rs = $db->get(\n'
         final_str += '\t' * 3 + '$tableIndex,\n'
         final_str += '\t' * 3 + '$keyIndex\n'
@@ -176,9 +202,7 @@ class MakeRedis(object):
         final_str += '\t' * 3 + '))\n'
         final_str += '\t' * 2 + '{\n'
         final_str += '\t' * 3 + 'return false;\n'
-        final_str += '\t' * 2 + '}\n'
-        final_str += '\t' * 2 + 'return true;\n'
-        final_str += '\t' * 1 + '}\n'
+        final_str += '\t' * 2 + '}\n\n'
 
         return final_str
 
@@ -229,7 +253,7 @@ class MakeRedis(object):
             self.deal_namespace(table.namespace), self.class_name)
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '$key = \'\';\n'
-        final_str += '\t' * 2 + '$key .= $%s;\n' % table.primary_key
+        final_str += '\t' * 2 + '$key .= %s;\n' % self.get_key_index(table.primary_key)
         final_str += '\t' * 2 + '$curDateTime = \\Sooh\\Base\\Utils::getTime();\n'
         final_str += '\t' * 2 + '$db = \Sooh\DB\KRedis::getInstance(\'%s\');\n' % table.config
         final_str += '\t' * 2 + '$rs = $db->get(\n'
@@ -260,54 +284,13 @@ class MakeRedis(object):
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '\n'
 
-        final_str += '\t' * 2 + '$tableIndex = \'%s_index_%s_del\';\n' % (self.table_name, table.primary_key)
-        final_str += '\t' * 2 + '$keyIndex = $%s;\n' % table.primary_key
-        final_str += '\t' * 2 + '$rs = $db->get(\n'
-        final_str += '\t' * 3 + '$tableIndex,\n'
-        final_str += '\t' * 3 + '$keyIndex\n'
-        final_str += '\t' * 2 + ');\n'
-        final_str += '\t' * 2 + 'if (!$rs)\n'
-        final_str += '\t' * 2 + '{\n'
-        final_str += '\t' * 3 + '$rs = [$key];\n'
-        final_str += '\t' * 2 + '}\n'
-        final_str += '\t' * 2 + 'else\n'
-        final_str += '\t' * 2 + '{\n'
-        final_str += '\t' * 3 + '$rs = json_decode(\n'
-        final_str += '\t' * 4 + '$rs,\n'
-        final_str += '\t' * 4 + 'true\n'
-        final_str += '\t' * 3 + ');\n'
-        final_str += '\t' * 3 + '$tmp = $rs;\n'
-        final_str += '\t' * 3 + '$rs = [];\n'
-        final_str += '\t' * 3 + '$isOld = false;\n'
-        final_str += '\t' * 3 + 'foreach ($tmp as $k)\n'
-        final_str += '\t' * 3 + '{\n'
-        final_str += '\t' * 4 + 'if ($key === $k)\n'
-        final_str += '\t' * 4 + '{\n'
-        final_str += '\t' * 5 + '$isOld = true;\n'
-        final_str += '\t' * 4 + '}\n'
-        final_str += '\t' * 4 + 'if ($db->exists(\n'
-        final_str += '\t' * 5 + '\'%s\',\n' % self.table_name
-        final_str += '\t' * 5 + '$k\n'
-        final_str += '\t' * 4 + '))\n'
-        final_str += '\t' * 4 + '{\n'
-        final_str += '\t' * 5 + '$rs[] = $k;\n'
-        final_str += '\t' * 4 + '}\n'
-        final_str += '\t' * 3 + '}\n'
-        final_str += '\t' * 3 + 'if (!$isOld)\n'
-        final_str += '\t' * 3 + '{\n'
-        final_str += '\t' * 4 + '$rs[] = $key;\n'
-        final_str += '\t' * 3 + '}\n'
-        final_str += '\t' * 2 + '}\n'
-        final_str += '\t' * 2 + 'if (false === $db->set(\n'
-        final_str += '\t' * 4 + '$tableIndex,\n'
-        final_str += '\t' * 4 + '$keyIndex,\n'
-        final_str += '\t' * 4 + 'json_encode($rs)\n'
-        final_str += '\t' * 3 + '))\n'
-        final_str += '\t' * 2 + '{\n'
-        final_str += '\t' * 3 + 'return false;\n'
-        final_str += '\t' * 2 + '}\n'
+        for index,index_obj in table.index_list.items():
+            final_str += self.set_index_table_str(index_obj.value)
+
+        final_str += self.set_index_table_str(table.primary_key, True)
+
         final_str += '\t' * 2 + 'return true;\n'
-        final_str += '\t' * 1 + '}\n'
+        final_str += '\t}\n\n'
 
         return final_str
 
@@ -340,7 +323,7 @@ class MakeRedis(object):
             self.deal_namespace(table.namespace), self.class_name)
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '$key = \'\';\n'
-        final_str += '\t' * 2 + '$key .= $%s;\n' % table.primary_key
+        final_str += '\t' * 2 + '$key .= %s;\n' % self.get_key_index(table.primary_key)
         final_str += '\t' * 2 + '$db = \Sooh\DB\KRedis::getInstance(\'%s\');\n' % table.config
         final_str += '\t' * 2 + '$rs = $db->get(\n'
         final_str += '\t' * 3 + '\'%s\',\n' % self.table_name
@@ -360,28 +343,43 @@ class MakeRedis(object):
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '\n'
         final_str += '\t' * 2 + 'return $rs;\n'
-        final_str += '\t' * 1 + '}\n'
+        final_str += '\t' * 1 + '}\n\n'
 
         return final_str
 
     def get_default_get_index_str(self, table):
+        final_str = ''
+
+        for index,index_obj in table.index_list.items():
+            final_str += self.get_index_str(table, index_obj.value)
+
+        final_str += self.get_index_str(table, table.primary_key, True)
+
+        return final_str
+
+    def get_index_str(self, table, index_value, has_del=False):
         func_doc_comment = '\t/**\n'
-        func_doc_comment += '\t * get data by %s,del\n' % table.primary_key
+        func_doc_comment += '\t * get data by %s\n' % ((index_value + ',del') if has_del else index_value)
         param_str = ''
 
-        for f_name in table.primary_key.split(','):
-            field_obj = table.field_list[f_name]
-            func_doc_comment += '\t' + ' * @param  $%s\t%s\n' % (f_name, field_obj.desc)
+        for f_name in index_value.split(','):
+            if f_name in table.field_list:
+                field_obj = table.field_list[f_name]
+                func_doc_comment += '\t' + ' * @param  $%s\t%s\n' % (f_name, field_obj.desc)
             if param_str == '':
                 param_str += '\t' * 2 + '$%s\n' % f_name
             else:
                 param_str += '\t' * 2 + ', $%s\n' % f_name
-        param_str += '\t' * 2 + ', $del\n'
+        if has_del:
+            param_str += '\t' * 2 + ', $%s\n' % 'del'
+
 
         func_doc_comment += '\t' + ' * @return record array\n'
         func_doc_comment += '\t' + ' */\n'
 
-        func_name = 'getBy%sDel' % table.primary_key.capitalize()
+        func_name = 'getBy%s' % ''.join([v.capitalize() for v in index_value.split(',')])
+        if has_del:
+            func_name += 'Del'
 
         final_str = ''
         final_str += func_doc_comment
@@ -395,8 +393,8 @@ class MakeRedis(object):
         final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::%s\'];\n' % (
             self.deal_namespace(table.namespace), self.class_name, func_name)
         final_str += '\t' * 2 + '}\n'
-        final_str += '\t' * 2 + '$keyIndex = $%s;\n' % table.primary_key
-        final_str += '\t' * 2 + '$tableIndex = \'%s_index_%s_del\';\n' % (self.table_name, table.primary_key)
+        final_str += '\t' * 2 + '$keyIndex = %s;\n' % self.get_key_index(index_value)
+        final_str += '\t' * 2 + '$tableIndex = \'%s\';\n' % self.get_table_index(index_value, has_del)
         final_str += '\t' * 2 + '$db = \Sooh\DB\KRedis::getInstance(\'%s\');\n' % table.config
         final_str += '\t' * 2 + '$keys = $db->get(\n'
         final_str += '\t' * 3 + '$tableIndex,\n'
@@ -421,14 +419,24 @@ class MakeRedis(object):
         final_str += '\t' * 2 + '$ret = [];\n'
         final_str += '\t' * 2 + 'foreach ($rs as $v)\n'
         final_str += '\t' * 2 + '{\n'
-        final_str += '\t' * 3 + '$ret[] = json_decode(\n'
-        final_str += '\t' * 4 + '$v,\n'
-        final_str += '\t' * 4 + 'true\n'
-        final_str += '\t' * 3 + ');\n'
+        if has_del:
+            final_str += '\t' * 3 + '$tmp = json_encode(\n'
+            final_str += '\t' * 4 + '$v,\n'
+            final_str += '\t' * 4 + 'true\n'
+            final_str += '\t' * 3 + ');\n'
+            final_str += '\t' * 3 + 'if ($tmp[\'del\'] == $del)\n'
+            final_str += '\t' * 3 + '{\n'
+            final_str += '\t' * 4 + '$ret[] = $tmp;\n'
+            final_str += '\t' * 3 + '}\n'
+        else:
+            final_str += '\t' * 3 + '$ret[] = json_encode(\n'
+            final_str += '\t' * 4 + '$v,\n'
+            final_str += '\t' * 4 + 'true\n'
+            final_str += '\t' * 3 + ');\n'
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '\n'
         final_str += '\t' * 2 + 'return $ret;\n'
-        final_str += '\t' * 1 + '}\n'
+        final_str += '\t' * 1 + '}\n\n'
 
         return final_str
 
@@ -500,7 +508,7 @@ class MakeRedis(object):
             self.deal_namespace(table.namespace), self.class_name, func_name)
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '$key = \'\';\n'
-        final_str += '\t' * 2 + '$key .= $%s;\n' % table.primary_key
+        final_str += '\t' * 2 + '$key .= %s;\n' % self.get_key_index(table.primary_key)
         final_str += '\t' * 2 + '$curDateTime = \\Sooh\\Base\\Utils::getTime();\n'
         final_str += '\t' * 2 + '$db = \Sooh\DB\KRedis::getInstance(\'%s\');\n' % table.config
         final_str += '\t' * 2 + '$rs = $db->get(\n'
@@ -526,8 +534,20 @@ class MakeRedis(object):
         final_str += '\t' * 2 + '{\n'
         final_str += '\t' * 3 + 'return false;\n'
         final_str += '\t' * 2 + '}\n\n'
-        final_str += '\t' * 2 + '$tableIndex = \'%s_index_%s_del\';\n' % (self.table_name, table.primary_key)
-        final_str += '\t' * 2 + '$keyIndex = $rs[\'%s\'];\n' % table.primary_key
+
+        for index,index_obj in table.index_list.items():
+            final_str += self.del_index_str(index_obj.value)
+
+        final_str += self.del_index_str(table.primary_key, True)
+
+        final_str += '\t' * 1 + '}\n'
+
+        return final_str
+
+    def del_index_str(self, index_value, pk=False):
+        final_str = ''
+        final_str += '\t' * 2 + '$tableIndex = \'%s\';\n' % self.get_table_index(index_value, pk)
+        final_str += '\t' * 2 + '$keyIndex = %s\n' % ' . \'_\' . '.join(['$rs[\'%s\']' % v for v in index_value.split(',')])
         final_str += '\t' * 2 + '$rs = $db->get(\n'
         final_str += '\t' * 3 + '$tableIndex,\n'
         final_str += '\t' * 3 + '$keyIndex\n'
@@ -562,8 +582,7 @@ class MakeRedis(object):
         final_str += '\t' * 4 + '$tableIndex,\n'
         final_str += '\t' * 4 + '$keyIndex\n'
         final_str += '\t' * 3 + ');\n'
-        final_str += '\t' * 2 + '}\n'
-        final_str += '\t' * 1 + '}\n'
+        final_str += '\t' * 2 + '}\n\n'
 
         return final_str
 
@@ -596,7 +615,7 @@ class MakeRedis(object):
             self.deal_namespace(table.namespace), self.class_name, func_name)
         final_str += '\t' * 2 + '}\n'
         final_str += '\t' * 2 + '$key = \'\';\n'
-        final_str += '\t' * 2 + '$key .= $%s;\n' % table.primary_key
+        final_str += '\t' * 2 + '$key .= %s;\n' % self.get_key_index(table.primary_key)
         final_str += '\t' * 2 + '$db = \Sooh\DB\KRedis::getInstance(\'%s\');\n' % table.config
         final_str += '\t' * 2 + '$rs = $db->get(\n'
         final_str += '\t' * 3 + '\'%s\',\n' % self.table_name
@@ -617,43 +636,22 @@ class MakeRedis(object):
         final_str += '\t' * 3 + '$rs,\n'
         final_str += '\t' * 3 + 'true\n'
         final_str += '\t' * 2 + ');\n'
-        final_str += '\t' * 2 + '$tableIndex = \'%s_index_%s_del\';\n' % (self.table_name, table.primary_key)
-        final_str += '\t' * 2 + '$keyIndex = $rs[\'%s\'];\n' % table.primary_key
-        final_str += '\t' * 2 + '$rs = $db->get(\n'
-        final_str += '\t' * 3 + '$tableIndex,\n'
-        final_str += '\t' * 3 + '$keyIndex\n'
-        final_str += '\t' * 2 + ');\n'
-        final_str += '\t' * 2 + 'if ($rs)\n'
-        final_str += '\t' * 2 + '{\n'
-        final_str += '\t' * 3 + '$rs = json_decode(\n'
-        final_str += '\t' * 4 + '$rs,\n'
-        final_str += '\t' * 4 + 'true\n'
-        final_str += '\t' * 3 + ');\n'
-        final_str += '\t' * 3 + '$tmp = $rs;\n'
-        final_str += '\t' * 3 + '$rs = [];\n'
-        final_str += '\t' * 3 + 'foreach($tmp as $k)\n'
-        final_str += '\t' * 3 + '{\n'
-        final_str += '\t' * 4 + 'if ($key !== $k)\n'
-        final_str += '\t' * 4 + '{\n'
-        final_str += '\t' * 5 + '$rs[] = $k;\n'
-        final_str += '\t' * 4 + '}\n'
-        final_str += '\t' * 3 + '}\n'
-        final_str += '\t' * 2 + '}\n'
-        final_str += '\t' * 2 + 'if (count($rs) > 0)\n'
-        final_str += '\t' * 2 + '{\n'
-        final_str += '\t' * 3 + 'return $db->set(\n'
-        final_str += '\t' * 4 + '$tableIndex,\n'
-        final_str += '\t' * 4 + '$keyIndex,\n'
-        final_str += '\t' * 4 + 'json_encode($rs)\n'
-        final_str += '\t' * 3 + ');\n'
-        final_str += '\t' * 2 + '}\n'
-        final_str += '\t' * 2 + 'else\n'
-        final_str += '\t' * 2 + '{\n'
-        final_str += '\t' * 3 + 'return $db->del(\n'
-        final_str += '\t' * 4 + '$tableIndex,\n'
-        final_str += '\t' * 4 + '$keyIndex\n'
-        final_str += '\t' * 3 + ');\n'
-        final_str += '\t' * 2 + '}\n'
+
+        for index,index_obj in table.index_list.items():
+            final_str += self.del_index_str(index_obj.value)
+
+        final_str += self.del_index_str(table.primary_key, True)
         final_str += '\t' * 1 + '}\n'
 
+        return final_str
+
+    def get_default_gettop_str(self):
+        final_str = ''
+        final_str += '\t' + 'public static function getTop($num = 1)\n'
+        final_str += '\t' + '{\n'
+        final_str += '\t' * 2 + 'assert(\n'
+        final_str += '\t' * 3 + 'false,\n'
+        final_str += '\t' * 3 + '\'not support\'\n'
+        final_str += '\t' * 2 + ');\n'
+        final_str += '\t' + '}\n\n'
         return final_str
