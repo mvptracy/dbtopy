@@ -120,6 +120,8 @@ class DB(object):
 
                     if node.nodeName == 'field':
                         table.add_field(Field(node))
+                    elif node.nodeName == 'primary':
+                        table.add_primary(Index(node))
                     else:
                         raise AttributeError(node.nodeName)
 
