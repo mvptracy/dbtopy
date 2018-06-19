@@ -19,6 +19,7 @@ class Field(object):
         self.charset = ''
         self.unsigned = 'false'
         self.bind = 'true'
+        self.encrypt = 'false'
 
         # args
         self.__node = node

@@ -765,8 +765,6 @@ class Make(object):
         if table.split_time:
             return final_str
         for upd_obj in table.update:
-            func_doc_comment = ''
-            param_str = ''
             bind_str = ''
             where_str = ''
             upd_str = ''
@@ -865,10 +863,6 @@ class Make(object):
         if table.split_time:
             return final_str
         for del_obj in table.delete:
-            func_doc_comment = ''
-            param_str = ''
-            bind_str = ''
-            where_str = ''
             self.tree_func_doc_comment = ''
             self.tree_param_str = ''
 
@@ -1406,6 +1400,8 @@ class Make(object):
             f_name, f_name, f_name)
         elif field.map == 'true':
             return 'json_encode($%s)' % f_name
+        elif field.encrypt == 'true':
+            return '%s::encrypt($%s)' % (self.MYSQL_NAMESPACE, f_name)
         else:
             return '$' + f_name
 
@@ -1697,6 +1693,9 @@ class Make(object):
                 if f_obj.type == 'datetime':
                     final_str += '\t' * 2 + '$rs[\'%s\'] = %s::dbTime2Timestamp($rs[\'%s\']);\n' % (
                         f_name, self.MYSQL_NAMESPACE, f_name)
+                if f_obj.encrypt == 'true':
+                    final_str += '\t' * 2 + '$rs[\'%s\'] = %s::decrypt($rs[\'%s\']);\n' % (
+                        f_name, self.MYSQL_NAMESPACE, f_name)
                 if f_obj.array == 'true':
                     final_str += '\t' * 2 + '$rs[\'%s\'] = explode( \',\', $rs[\'%s\'] );\n' % (f_name, f_name)
                     final_str += '\t' * 2 + 'array_pop( $rs[\'%s\'] );\n' % f_name
@@ -1706,6 +1705,9 @@ class Make(object):
             else:
                 if f_obj.type == 'datetime':
                     final_str += '\t' * 4 + '$v[\'%s\'] = %s::dbTime2Timestamp($v[\'%s\']);\n' % (
+                        f_name, self.MYSQL_NAMESPACE, f_name)
+                if f_obj.encrypt == 'true':
+                    final_str += '\t' * 4 + '$v[\'%s\'] = %s::decrypt($v[\'%s\']);\n' % (
                         f_name, self.MYSQL_NAMESPACE, f_name)
                 if f_obj.array == 'true':
                     final_str += '\t' * 4 + '$v[\'%s\'] = explode( \',\', $v[\'%s\'] );\n' % (f_name, f_name)
