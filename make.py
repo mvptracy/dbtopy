@@ -1,5 +1,5 @@
 from db_py.field import Field
-
+import os
 
 class Make(object):
     MYSQL_NAMESPACE = '\\Sooh\\DB\\PdoMysql'
@@ -303,9 +303,14 @@ class Make(object):
             getall_str, gettop_str = '', ''
         get_by_index_str = self.get_by_index_str(table)
         custom_select_str = self.get_custom_select_str(table)
+        xml_fields = self.get_xml_fields_str(table)
 
-        w_str = head_str + get_table_name_str + add_str + upd_str + del_str + real_del_str + create_str + trans_str + custom_del_str + custom_upd_str + get_str + getall_str + gettop_str + get_by_index_str + custom_select_str + bottom_str
+        w_str = head_str + get_table_name_str + add_str + upd_str + del_str + real_del_str + create_str + trans_str + custom_del_str + custom_upd_str + get_str + getall_str + gettop_str + \
+                get_by_index_str + custom_select_str + xml_fields + bottom_str
         self.__write_file(self.class_name + '.php', w_str, 'w')
+
+        # model.ini
+        self.write_model_ini(table.namespace + '\\' + self.class_name)
 
     # function add
     def get_default_add_str(self, table):
@@ -1846,3 +1851,49 @@ class Make(object):
         if table.split_locker:
             final_str += '\t' * 2 + '\Sooh\Lock\LockerCtrl::%sUnlock();\n' % table.split_locker
         return final_str
+
+    #获取xml配置字段信息
+    def get_xml_fields_str(self, table):
+        final_str = ''
+
+        final_str += '\t' + 'public static function getXmlFields()\n'
+        final_str += '\t' + '{\n'
+        final_str += '\t' * 2 + 'if (isset($GLOBALS[\'db_test\']) && isset($GLOBALS[\'db_test\'][\'%s\\\\%s::create\']))\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '{\n'
+        final_str += '\t' * 3 + 'return $GLOBALS[\'db_test\'][\'%s\\\\%s::create\'];\n' % (
+            self.deal_namespace(table.namespace), self.class_name)
+        final_str += '\t' * 2 + '}\n\n'
+
+        final_str += '\t' * 2 + '$xmlFields = [\n'
+
+        for field_name, field in table.field_list.items():
+            final_str += '\t' * 3 + '[\'%s\', \'%s\', %s],\n' % (field.name, field.type, field.size or 'null')
+        final_str += '\t' * 2 + '];\n\n'
+        final_str += '\t' * 2 + 'return [\n'
+        final_str += '\t' * 3 + '\'config\' => \'%s\',\n' % table.config
+        final_str += '\t' * 3 + '\'table_name\' => \'%s\',\n' % self.table_name
+        final_str += '\t' * 3 + '\'fields\' => $xmlFields\n'
+        final_str += '\t' * 2 + '];\n'
+        final_str += '\t' + '}\n'
+
+        return final_str
+
+    # model配置 用于service/checkdb.php
+    @staticmethod
+    def write_model_ini(model_name):
+        # file_path = '../../php/server/conf/model.ini'
+        file_path = 'model.ini'
+
+        if not os.path.exists(file_path):
+            with open(file_path, 'w', 1024, 'utf-8') as fp:
+                fp.write(model_name)
+        else:
+            with open(file_path, 'r+', 128, 'utf-8') as fp:
+                for line in fp.readlines():
+                    if line.strip() == model_name:
+                        return
+                fp.write('\n' + model_name)
+
+
+
