@@ -1221,7 +1221,7 @@ class Make(object):
                     if f['name'] not in table.DEFAULT_FIELDS:
                         spec_fields[f['name']] = f_obj
 
-                if has_join:
+                if has_join and f_name != '*':
                     tb = f.get('table_prefix', table.prefix) + f.get('table', table.name)
                     if table.split_time and tb == self.table_name:
                         tb = '\' . $tableName . \''
