@@ -1370,10 +1370,7 @@ class Make(object):
     def get_class_name(table_name):
         class_name = ''
         for i, word in enumerate(table_name.split('_')):
-            if i > 0:
-                class_name += word[0].upper() + word[1:]
-            else:
-                class_name += word
+            class_name += word[0].upper() + word[1:]
 
         return class_name + 'Data'
 
