@@ -10,7 +10,7 @@ class Select(object):
         self.suffix = ''
         self.single = 'false'
         self.page = 'false'
-        self.logic_del = 'true'
+        self.logic_del = None
         self.field_list = []  # [{'name':'id';'value':'111'}]
         self.where_list = []  # [where_obj, where_obj]
         self.join_list = []  # [join_obj, join_obj]

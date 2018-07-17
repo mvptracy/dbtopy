@@ -1253,6 +1253,8 @@ class Make(object):
                     spec_fields.update(self.tables.table[j.join['table']].field_list)
 
             # where
+            if sel_obj.logic_del is None:
+                sel_obj.logic_del = 'true'
             if sel_obj.logic_del == 'true' and len(join_tables) == 0:
                 where_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
             elif sel_obj.logic_del == 'true' and len(join_tables) > 0:
