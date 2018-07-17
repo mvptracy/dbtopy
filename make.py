@@ -1369,8 +1369,11 @@ class Make(object):
     # 获取类名
     def get_class_name(table_name):
         class_name = ''
-        for word in table_name.split('_'):
-            class_name += word.capitalize()
+        for i, word in enumerate(table_name.split('_')):
+            if i > 0:
+                class_name += word[0].upper() + word[1:]
+            else:
+                class_name += word
 
         return class_name + 'Data'
 
