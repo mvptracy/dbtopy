@@ -1254,7 +1254,7 @@ class Make(object):
 
             # where
             if sel_obj.logic_del is None:
-                sel_obj.logic_del = 'true'
+                sel_obj.logic_del = table.logic_del
             if sel_obj.logic_del == 'true' and len(join_tables) == 0:
                 where_str += '\t' * 2 + '$sql .= \' WHERE del=0\';\n'
             elif sel_obj.logic_del == 'true' and len(join_tables) > 0:
